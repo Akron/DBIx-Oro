@@ -1,0 +1,68 @@
+0.21 2012-05-31
+        - Moved Sojolicious::Oro to DBIx::Oro.
+          Version numbers will now be independent.
+        - Oro related CHANGE notes are ported to
+          DBIx Oro.
+        - Optimization for last_sql report.
+        - Small optimization for error reports.
+        - Fixed a small bug in joined tables.
+	- Fixed a small bug in count.
+	- Fixed a small bug in select callback.
+        - Splitted test files.
+	- Fixed a small bug in -order_by preparation.
+	- Added -group_by condition.
+ 	- Fixed a lot of bugs in the field selector.
+ 	- Made join tables a lot more powerful.
+	- Lots of micro optimizations.
+        - Made driver attribute stable.
+
+0.20 2012-05-20
+        - Small optimizations to Oro.
+        - Deleted deprecated methods from Oro.
+
+0.19 2012-05-01
+	- Added native caching option to Oro.
+
+0.18 2012-04-25
+        - Added on_connect event to Oro.
+
+0.17 2012-04-03
+        - Made Sojolicious::ComplexValues independent from Mojo.
+        - Made M::P::Date::RFC3339 independent from Mojo.
+        - Lots of bugfixes everywhere.
+
+0.16 2012-04-02
+        - Split Oro and Oro::SQLite.
+	- Added Oro::SQLite.
+	- Added snippet, offsets, and matchinfo support to Oro::SQLite.
+	- Added attach and detach support to Oro::SQLite.
+	- Added password support to Oro.
+	- Added treatment support to Oro.
+	- Changed default errors in Oro to be printed.
+        - Added explain method to Oro.
+        - Lots of bugfixes everywhere.
+
+0.15 2012-02-02
+        - Made Sojolicious::Oro thread- and fork-safe.
+        - Added restrictions to Sojolicious::Oro.
+        - Added Simple Joins to Sojolicious::Oro.
+	- Removed Pager support from Sojolicious::Oro.
+	- Added distinct restriction to Sojolicious::Oro.
+	- Added multiple insertions with default to
+	  Sojolicious::Oro.
+	- Multiple bugfixes to Sojolicious::Oro,
+          Sojolicious::ComplexValues.
+        - Added operator support for Sojolicious::Oro.
+
+0.14 2011-12-30
+        - Added Sojolicious::ComplexValues.
+        - Added Transactions to Sojolicious::Oro.
+        - Added table method to Sojolicious::Oro and
+          improved transactions and multiple insertions.
+
+0.13 2011-12-15
+        - Made the multiple inserts in Sojolicious::Oro
+          independent from Transactions.
+
+0.12 2011-11-09
+        - Added Oro to the Sojolicious bundle.
