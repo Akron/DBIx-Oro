@@ -54,6 +54,10 @@ sub new {
   # Attach hash
   $self->{attached} = {};
 
+  # Autocommit
+  ${$self->{autocommit}} =
+    ${$self->{_autocounter}} = 0;
+
   # Return object
   $self;
 };
@@ -142,7 +146,13 @@ sub delete {
 
   # Delete
   unless ($secure) {
-    return $self->SUPER::delete(@_);
+
+    my $rv = $self->SUPER::delete(@_);
+
+    # Decrement autocommit
+    $self->_decr_commit if $rv;
+
+    return $rv;
   }
 
   # Delete securely
@@ -161,6 +171,9 @@ sub delete {
 
     # Delete
     $rv = $self->SUPER::delete(@_);
+
+    # Decrement autocommit
+    $self->_decr_commit if $rv;
 
     # Reset secure_delete pragma
     $self->do('PRAGMA secure_delete = OFF') unless $sec_value;
@@ -211,7 +224,12 @@ sub insert {
       ' (' . join(', ', @keys) . ') VALUES (' . _q(\@keys) . ')';
 
     # Prepare and execute
-    return scalar $self->prep_and_exec( $sql, \@values );
+    my $rv = $self->prep_and_exec( $sql, \@values );
+
+    # Decrement autocommit
+    $self->_decr_commit if $rv;
+
+    return $rv;
   }
 
   # Multiple inserts
@@ -253,10 +271,15 @@ sub insert {
       $sql .= $union . ((' UNION ' . $union) x ( scalar(@_) - 1 ));
 
       # Prepare and execute with prepended defaults
-      return $self->prep_and_exec(
+      my @rv = $self->prep_and_exec(
 	$sql,
 	[ map { (@default, @$_); } @_ ]
       );
+
+      # Decrement autocommit
+      $self->_decr_commit if $rv[0];
+
+      return @rv;
     }
 
     # More than SQLite MAX_COMP_SELECT insertions
@@ -290,6 +313,9 @@ sub insert {
 
 	}) or return;
 
+      # Decrement autocommit
+      $self->_decr_commit if $rv;
+
       # Everything went fine
       return $rv;
     };
@@ -299,6 +325,31 @@ sub insert {
   return;
 };
 
+
+# Update existing values in the database
+sub update {
+  my $self = shift;
+
+  my $rv = $self->SUPER::update(@_);
+
+  # Decrement autocommit
+  $self->_decr_commit if $rv;
+
+  return $rv;
+};
+
+
+sub merge {
+  my $self = shift;
+
+  my ($rv, $type) = $self->SUPER::merge(@_);
+
+  if ($rv && $type eq 'insert' && ${$self->{autocommit}}) {
+    ${$self->{_autocounter}}--;
+  };
+
+  return wantarray ? ($rv, $type) : $rv;
+};
 
 # Attach database
 sub attach {
@@ -500,6 +551,74 @@ sub snippet {
   $sub .= " . \")\";\n};";
 
   return eval( $sub );
+};
+
+
+# Set autocommit
+sub autocommit {
+  my $self = shift;
+
+  # Get autocommit
+  unless (defined $_[0]) {
+    return ${$self->{autocommit}} || 0;
+  }
+
+  # Set autocommit
+  else {
+    my $num = shift;
+    my $dbh = $self->dbh;
+
+    # Is a number
+    if ($num && $num =~ m/^\d+/o) {
+      if ($num > 1) {
+	$dbh->{AutoCommit} = 0;
+	${$self->{autocommit}} = 
+	  ${$self->{_autocounter}} = $num;
+	return 1;
+      }
+
+      else {
+	$dbh->{AutoCommit} = 1;
+	${$self->{_autocounter}} =
+	  ${$self->{autocommit}} = 0;
+	return 1;
+      };
+    }
+
+    # Is null
+    elsif (!$num) {
+      ${$self->{autocommit}} = 0;
+      if (${$self->{_autocounter}}) {
+	${$self->{_autocounter}} = 0;
+	$dbh->commit;
+      };
+      $dbh->{AutoCommit} = 1 unless $self->{in_txn};
+      return 1;
+    }
+
+    # Failure
+    else {
+      return;
+    };
+  };
+};
+
+
+# Decrement commit counter
+sub _decr_commit {
+  my $self = shift;
+
+  # Autocounter is set
+  if (${$self->{_autocounter}}) {
+    my $auto = --${$self->{_autocounter}};
+
+    # Commit is null
+    unless ($auto) {
+
+      $self->dbh->commit unless $self->{in_txn};
+      ${$self->{_autocounter}} = ${$self->{autocommit}};
+    };
+  };
 };
 
 

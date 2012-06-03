@@ -2,7 +2,7 @@ package DBIx::Oro;
 use strict;
 use warnings;
 
-our $VERSION = '0.21';
+our $VERSION = '0.22';
 
 use v5.10.1;
 use Carp qw/carp croak/;
@@ -59,6 +59,7 @@ sub new {
   };
 
   # Init by default
+  # Todo: in_txn has to be a reference
   @param{qw/in_txn last_sql/} = (0, '');
 
   $param{created} //= 0;
@@ -125,20 +126,24 @@ sub table {
 
   my %param;
   # Joined table
-  if (ref($_[0])) {
-    $param{table} = [ _join_tables( shift(@_) ) ];
-  }
+  $param{table} = do {
+    if (ref($_[0])) {
+      [ _join_tables( shift(@_) ) ];
+    }
 
-  # Table name
-  else {
-    $param{table} = shift;
+    # Table name
+    else {
+      shift;
+    };
   };
 
   # Clone parameters
   foreach (qw/dbh created in_txn
               savepoint pid tid
 	      dsn _connect_cb
-	      on_connect/) {
+	      on_connect
+	      autocommit _autocounter
+	     /) {
     $param{$_} = $self->{$_};
   };
 
@@ -263,6 +268,7 @@ sub insert {
 
     # Create insert arrays
     my (@keys, @values);
+
     while (my ($key, $value) = each %param) {
       next unless $key =~ $KEY_REGEX;
       push(@keys, $key), push(@values, $value);
@@ -436,7 +442,6 @@ sub select {
     $result = $chi->get($key);
   };
 
-
   # Unknown restrictions
   if (scalar keys %$prep) {
     carp 'Unknown restriction option: ' . join(', ', keys %$prep);
@@ -602,7 +607,7 @@ sub delete {
     $sql .= _restrictions($prep, $values) if $prep;
   };
 
-  # Execute deletion
+  # Prepare and execute deletion
   my $rv = $self->prep_and_exec($sql, $values);
 
   # Return value
@@ -625,6 +630,7 @@ sub merge {
   unshift(@param, $table) unless $self->{table};
 
   my $rv;
+  my $job = 'update';
   $self->txn(
     sub {
 
@@ -640,10 +646,15 @@ sub merge {
       unshift(@param, $table) unless $self->{table};
       $rv = $self->insert(@param) or return -1;
 
+      $job = 'insert';
+
+      return;
     }) or return;
 
   # Return value is bigger than 0
-  return $rv if $rv && $rv > 0;
+  if ($rv && $rv > 0) {
+    return wantarray ? ($rv, $job) : $rv;
+  };
 
   return;
 };
@@ -778,6 +789,7 @@ sub do {
   my $dbh = shift->dbh;
   my (@rv) = $dbh->do( @_ );
 
+  # Error
   carp $dbh->errstr . ' in "' . $_[0] . '"' if $dbh->err;
   return @rv;
 };
@@ -839,7 +851,7 @@ sub txn {
     push(@$sp_array, $sp);
 
     # Start transaction
-    $self->do('SAVEPOINT ' . $sp);
+    $self->do("SAVEPOINT $sp");
 
     # Run wrap actions
     my $rv = $_[0]->($self);
@@ -1079,10 +1091,10 @@ sub _join_tables {
     my $table = shift @join;
     my $t_alias;
 
-    # Push table name (better later)
+    # Check table name
     if ($table =~ s/^([^:]+?):([^:]+?)$/$1 $2/o) {
       $t_alias = $2;
-    }
+    };
 
     # Push table
     push(@tables, $table);
@@ -1238,7 +1250,7 @@ sub _get_pairs ($) {
 
 	    # Simple operator
 	    if (index($op, 'BETWEEN') == -1) {
-	      my $p = $key . ' ' . $op . ' ';
+	      my $p = "$key $op ";
 
 	      # Defined value
 	      if (defined $val) {
@@ -1256,7 +1268,7 @@ sub _get_pairs ($) {
 
 	    # Between operator
 	    elsif (ref $val && ref $val eq 'ARRAY') {
-	      push(@pairs, $key . ' ' . $op . ' ? AND ?'),
+	      push(@pairs, "$key $op ? AND ?"),
 		push(@values, $val->[0], $val->[1]);
 	    };
 	  }
@@ -1264,7 +1276,7 @@ sub _get_pairs ($) {
       }
 
       else {
-	carp 'Unknown operator ' . $key and next;
+	carp "Unknown operator $key" and next;
       };
     }
 
@@ -1298,12 +1310,12 @@ sub _get_pairs ($) {
 	  # Valid order/group_by value
 	  if (m/$VALID_GROUPORDER_RE/o) {
 	    s/^([\-\+])//o;
-	    push(@field_array, $1 && $1 eq '-' ? $_ . ' DESC' : $_ );
+	    push(@field_array, $1 && $1 eq '-' ? "$_ DESC" : $_ );
 	  }
 
 	  # Invalid order/group_by value
 	  else {
-	    carp $_ . ' is not a valid Oro ' . $key . ' restriction';
+	    carp "$_ is not a valid Oro $key restriction";
 	  };
 	};
 
@@ -1362,7 +1374,7 @@ sub _fields ($$) {
       ($sql, $inner_sub, my @param) = $sql->($table) if ref $sql;
 
       $treatment{ $alias } = [$inner_sub, @param ] if $inner_sub;
-      push(@fields, $sql . ':' . $alias);
+      push(@fields, "$sql:$alias");
     };
   };
 
@@ -1380,7 +1392,7 @@ sub _fields ($$) {
 
 	      # ~ indicates rather not explicite
 	      $alias{$3} = 1 if $2 eq ':';
-	      $1 . ' AS "' . $3 . '"';
+	      qq{$1 AS "$3"};
 	    }
 
 	    # Implicite field alias
