@@ -554,6 +554,23 @@ sub snippet {
 };
 
 
+# New table object
+sub table {
+  my $self = shift;
+
+  # Get object from superclass
+  my $table = $self->SUPER::table(@_);
+
+  # Add autocommit parameters
+  foreach (qw/autocommit _autocounter/) {
+    $table->{$_} = $self->{$_};
+  };
+
+  # Return blessed object
+  return $table;
+};
+
+
 # Set autocommit
 sub autocommit {
   my $self = shift;

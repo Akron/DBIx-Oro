@@ -141,9 +141,7 @@ sub table {
   foreach (qw/dbh created in_txn
               savepoint pid tid
 	      dsn _connect_cb
-	      on_connect
-	      autocommit _autocounter
-	     /) {
+	      on_connect/) {
     $param{$_} = $self->{$_};
   };
 
