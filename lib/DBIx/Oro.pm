@@ -1197,7 +1197,7 @@ sub _join_tables {
 
 
 # Get pairs and values
-sub _get_pairs ($) {
+sub _get_pairs {
   my (@pairs, @values, %prep);
 
   while (my ($key, $value) = each %{ $_[0] }) {
@@ -1342,7 +1342,7 @@ sub _get_pairs ($) {
 
 
 # Get fields
-sub _fields ($$) {
+sub _fields {
   my $table = shift;
 
   my %treatment;
@@ -1409,7 +1409,7 @@ sub _fields ($$) {
 
 
 # Restrictions
-sub _restrictions ($$) {
+sub _restrictions {
   my ($prep, $values) = @_;
   my $sql = '';
 
@@ -1459,7 +1459,7 @@ sub _restrictions ($$) {
 
 
 # Clean alias string
-sub _clean_alias ($) {
+sub _clean_alias {
   for (my $x = shift) {
     tr/ ()[]"$@#./_/s;
     s/[_\s]+$//;
@@ -1469,7 +1469,7 @@ sub _clean_alias ($) {
 
 
 # Questionmark string
-sub _q ($) {
+sub _q {
   join(', ', ('?') x scalar( @{ $_[0] } ));
 };
 

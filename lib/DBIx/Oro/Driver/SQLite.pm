@@ -674,7 +674,7 @@ sub _decr_commit {
 
 
 # Questionmark string
-sub _q ($) {
+sub _q {
   join(', ', split('', '?' x scalar( @{$_[0]} )));
 };
 
