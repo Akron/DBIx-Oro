@@ -27,6 +27,8 @@ sub new {
   my $class = shift;
   my %param = @_;
 
+  my $autocommit = delete $param{autocommit};
+
   # Bless object with hash
   my $self = bless \%param, $class;
 
@@ -58,6 +60,9 @@ sub new {
   ${$self->{autocommit}} =
     ${$self->{_autocounter}} = 0;
 
+  # Set autocommit
+  $self->autocommit($autocommit) if $autocommit;
+
   # Return object
   $self;
 };
@@ -67,6 +72,9 @@ sub new {
 sub _connect {
   my $self = shift;
   my $dbh = $self->SUPER::_connect( sqlite_unicode => 1 );
+
+  # Turn foreign keys on as default
+  $dbh->do('PRAGMA foreign_keys = ON') unless $self->{foreign_keys};
 
   # Set busy timeout
   $dbh->sqlite_busy_timeout( $self->{busy_timeout} || 300 );
@@ -562,12 +570,38 @@ sub table {
   my $table = $self->SUPER::table(@_);
 
   # Add autocommit parameters
-  foreach (qw/autocommit _autocounter/) {
+  foreach (qw/autocommit _autocounter
+	     foreign_keys/) {
     $table->{$_} = $self->{$_};
   };
 
   # Return blessed object
   return $table;
+};
+
+
+# Set foreign_key pragma
+sub foreign_keys {
+  my $self = shift;
+
+  # Get pragma
+  unless (defined $_[0]) {
+    return $self->{foreign_keys};
+  }
+
+  # Turn foreign keys on
+  elsif ($_[0] && !$self->{foreign_keys}) {
+    $self->dbh->do('PRAGMA foreign_keys = ON');
+    return ($self->{foreign_keys} = 1);
+  }
+
+  # Turn foreign keys off
+  elsif (!$_[0] && $self->{foreign_keys}) {
+    $self->dbh->do('PRAGMA foreign_keys = OFF');
+    return ($self->{foreign_keys} = 0);
+  };
+
+  return;
 };
 
 
@@ -703,6 +737,7 @@ L<DBIx::Oro::Driver::SQLite> inherits all attributes from
 L<DBIx::Oro> and implements the following new ones
 (with possibly overwriting inherited attributes).
 
+
 =head2 C<file>
 
   my $file = $oro->file;
@@ -714,6 +749,27 @@ This can be a filename (with a path prefix),
 string for temporary files.
 
 B<This attribute is EXPERIMENTAL and may change without warnings.>
+
+
+=head2 C<foreign_keys>
+
+  print $oro->foreign_keys;
+  $oro->foreign_keys(0);
+
+L<DBIx::Oro::Driver::SQLite> turns foreign keys on by default.
+To disable this, yu can set C<foreign_keys> to a false value,
+e.g. in the constructor.
+
+=head2 C<autocommit>
+
+  print $oro->autocommit;
+  $oro->autocommit(200);
+
+Run commit after a given number of C<insert>, C<update>, C<delete>
+or C<merge> operations. Accepts the number of silent operations
+till the commit is released. Will automatically commit on start.
+To release unstaged changes at the end, just reset autocommit,
+e.g. with C<$oro-E<gt>autocommit(0)>.
 
 
 =head1 METHODS
