@@ -35,6 +35,8 @@ our $VALID_FIELD_REGEX =
 our $VALID_GROUPORDER_RE =
   qr/^[-\+]?(?:$KEY_REGEX|$FUNCTION_REGEX)$/;
 
+our $FIELD_REST_RE = qr/^(.+?)(:~?)([^:"~][^:"]*?)$/;
+
 our $CACHE_COMMENT = 'From Cache';
 
 
@@ -946,9 +948,9 @@ sub _connect {
     $self->{user} // undef,
     $self->_password,
     {
-      PrintError     => 0,
-      RaiseError     => 0,
-      AutoCommit     => 1,
+      PrintError => 0,
+      RaiseError => 0,
+      AutoCommit => 1,
       @_
     });
 
@@ -981,7 +983,7 @@ sub _connect {
 
   # Password method
   sub _password {
-    my $id = shift()->{_id};
+    my $id = shift->{_id};
     my $pwd_set = shift;
 
     my ($this) = caller(0);
@@ -1026,6 +1028,7 @@ sub _table_name {
 
   # Table object
   else {
+
     # Join table object not allowed
     return $self->{table} unless ref $self->{table};
   };
@@ -1044,7 +1047,7 @@ sub _table_obj {
   # Not a table object
   unless (exists $self->{table}) {
 
-    my $table = shift( @{ shift(@_) } );
+    my $table = shift( @{ shift @_ } );
 
     # Table name as a string
     unless (ref $table) {
@@ -1087,12 +1090,9 @@ sub _join_tables {
 
     # Table name
     my $table = shift @join;
-    my $t_alias;
 
     # Check table name
-    if ($table =~ s/^([^:]+?):([^:]+?)$/$1 $2/o) {
-      $t_alias = $2;
-    };
+    my $t_alias = $2 if $table =~ s/^([^:]+?):([^:]+?)$/$1 $2/o;
 
     # Push table
     push(@tables, $table);
@@ -1100,8 +1100,7 @@ sub _join_tables {
     # Set prefix
     my $prefix = $t_alias ? $t_alias : $table;
 
-    my $ref;
-    if ($ref = ref $join[0] ) {
+    if (my $ref = ref $join[0]) {
 
       # Remember aliases
       my %alias;
@@ -1112,6 +1111,7 @@ sub _join_tables {
 	my $field_array = shift @join;
 
 	my $f_prefix = '';
+
 	if (ref $join[0] && ref $join[0] eq 'HASH') {
 
 	  # Set Prefix if given.
@@ -1122,28 +1122,31 @@ sub _join_tables {
 	};
 
 	# Reformat field values
-	my $reformat = [ map {
-	  # Is a reference
-	  if (!ref $_) {
+	my $reformat = [
+	  map {
 
-	    # Set alias semi explicitely
-	    if (index($_, ':') == -1) {
-	      $_ .= ':~' . $f_prefix . _clean_alias($_);
+	    # Is a reference
+	    unless (ref $_) {
+
+	      # Set alias semi explicitely
+	      if (index($_, ':') == -1) {
+		$_ .= ':~' . $f_prefix . _clean_alias($_);
+	      };
+
+	      # Field is not a function
+	      if (index($_, '(') == -1) {
+		$_ = "$prefix.$_";
+	      }
+
+	      # Field is a function
+	      else {
+		s/([\(,]\s*)($KEY_REGEX)(\s*[,\)])/$1$prefix\.$2$3/og
+	      };
 	    };
 
-	    # Field is not a function
-	    if (index($_, '(') == -1) {
-	      $_ = $prefix . '.' . $_;
-	    }
-
-	    # Field is a function
-	    else {
-	      s/([\(,]\s*)($KEY_REGEX)(\s*[,\)])/$1$prefix\.$2$3/og
-	    };
-	  };
-
-	  $_;
-	} @$field_array ];
+	    $_;
+	  } @$field_array
+	];
 
 	# Automatically prepend table and, if not given, alias
 	(my $fields, $treatment, my $alias) = _fields($t_alias, $reformat);
@@ -1156,7 +1159,7 @@ sub _join_tables {
 
       # Add prepended *
       else {
-	push(@fields, $prefix . '.*');
+	push(@fields, "$prefix.*");
       };
 
       # Marker hash reference
@@ -1166,7 +1169,7 @@ sub _join_tables {
 	# Add database fields to marker hash
 	while (my ($key, $value) = each %$hash) {
 
-	  $key = $prefix . '.' . $key unless $alias{$key};
+	  $key = "$prefix.$key" unless $alias{$key};
 
 	  # Prefix, if not an explicite alias
 	  foreach (ref $value ? @$value : $value) {
@@ -1186,7 +1189,7 @@ sub _join_tables {
     foreach (@$fields) {
       push(
 	@pairs,
-	$field . ' ' . ($ind < 0 ? '!' : '') . '= ' . $_
+	"$field " . ($ind < 0 ? '!' : '') . "= $_"
       );
     };
   };
@@ -1204,22 +1207,22 @@ sub _get_pairs {
 
     # Not a valid key
     unless ($key =~ m/^-?$KEY_REGEX$/o) {
-      carp $key . ' is not a valid Oro key' and next;
+      carp "$key is not a valid Oro key" and next;
     };
 
-    if (index($key, '-') != 0) {
+    if (substr($key, 0, 1) ne '-') {
 
       # Equality
-      if (!ref $value) {
+      unless (ref $value) {
 
 	# NULL value
 	unless (defined $value) {
-	  push(@pairs, $key . ' IS NULL');
+	  push(@pairs, "$key IS NULL");
 	}
 
 	# Simple value
 	else {
-	  push(@pairs,  $key . ' = ?'),
+	  push(@pairs, "$key = ?"),
 	    push(@values, $value);
 	}
       }
@@ -1228,7 +1231,7 @@ sub _get_pairs {
       elsif (ref $value eq 'ARRAY') {
 	# Undefined values in the array are not specified
 	# as ' IN (NULL, ...) does not work
-	push (@pairs, $key . ' IN (' . _q($value) . ')' ),
+	push (@pairs, "$key IN (" . _q($value) . ')' ),
 	  push(@values, @$value);
       }
 
@@ -1269,7 +1272,7 @@ sub _get_pairs {
 	    # Between operator
 	    elsif (ref $val && ref $val eq 'ARRAY') {
 	      push(@pairs, "$key $op ? AND ?"),
-		push(@values, $val->[0], $val->[1]);
+		push(@values, @{$val}[0, 1]);
 	    };
 	  }
 	}
@@ -1308,7 +1311,7 @@ sub _get_pairs {
 	foreach (ref $value ? @$value : $value) {
 
 	  # Valid order/group_by value
-	  if (m/$VALID_GROUPORDER_RE/o) {
+	  if ($_ =~ $VALID_GROUPORDER_RE) {
 	    s/^([\-\+])//o;
 	    push(@field_array, $1 && $1 eq '-' ? "$_ DESC" : $_ );
 	  }
@@ -1339,7 +1342,7 @@ sub _get_pairs {
     };
   };
 
-  return (\@pairs, \@values, keys %prep ? \%prep : undef);
+  return (\@pairs, \@values, (keys %prep ? \%prep : undef));
 };
 
 
@@ -1347,11 +1350,9 @@ sub _get_pairs {
 sub _fields {
   my $table = shift;
 
-  my %treatment;
-  my %alias;
+  my (%treatment, %alias, @fields);
 
-  my @fields;
-  foreach (@{$_[0]}) {
+  foreach ( @{$_[0]} ) {
 
     # Ordinary String
     unless (ref $_) {
@@ -1363,7 +1364,7 @@ sub _fields {
 
       # Invalid field
       else {
-	carp $_ . ' is not a valid Oro field value'
+	carp "$_ is not a valid Oro field value"
       };
     }
 
@@ -1381,32 +1382,35 @@ sub _fields {
   my $fields = join(', ', @fields);
 
   # Return if no alias fields exist
-  return $fields if $fields !~ m/[\.:=]/o;
+  return $fields unless $fields =~ m/[\.:=]/o;
 
   # Join with alias fields
-  return
-    (join(', ',
-	  map {
-	    # Explicite field alias
-	    if (m/^(.+?)(:~?)([^:"~][^:"]*?)$/) {
+  return (
+    join(
+      ', ',
+      map {
+	# Explicite field alias
+	if ($_ =~ $FIELD_REST_RE) {
 
-	      # ~ indicates rather not explicite
-	      $alias{$3} = 1 if $2 eq ':';
-	      qq{$1 AS "$3"};
-	    }
+	  # ~ indicates rather not explicite
+	  $alias{$3} = 1 if $2 eq ':';
+	  qq{$1 AS "$3"};
+	}
 
-	    # Implicite field alias
-	    elsif (m/^(?:.+?)\.(?:[^\.]+?)$/) {
-	      $_ . ' AS "' . _clean_alias $_ . '"';
-	    }
+	# Implicite field alias
+	elsif (m/^(?:.+?)\.(?:[^\.]+?)$/) {
+	  $_ . ' AS "' . _clean_alias $_ . '"';
+	}
 
-	    # Field value
-	    else {
-	      $_
-	    };
-	  } @fields),
-     %treatment ? \%treatment : undef,
-     \%alias);
+	# Field value
+	else {
+	  $_
+	};
+      } @fields
+    ),
+    (%treatment ? \%treatment : undef),
+    \%alias
+  );
 };
 
 
@@ -1509,6 +1513,7 @@ DBIx::Oro - Simple Database Accessor
   my $person = $oro->table('Person');
   my $peters = $person->select({ name => 'Peter' });
 
+
 =head1 DESCRIPTION
 
 L<DBIx::Oro> is a simple database accessor that provides
@@ -1522,15 +1527,8 @@ For now it is limited to SQLite. It should be fork- and thread-safe.
 B<DBIx::Oro is in beta status. Do not rely on methods, especially
 on these marked as experimental.>
 
+
 =head1 ATTRIBUTES
-
-=head2 C<dbh>
-
-  my $dbh = $oro->dbh;
-  $oro->dbh(DBI->connect('...'));
-
-The DBI database handle.
-
 
 =head2 C<created>
 
@@ -1565,12 +1563,26 @@ and indices for SQLite databases.
 
 B<This attribute is EXPERIMENTAL and may change without warnings.>
 
+=head2 C<dbh>
+
+  my $dbh = $oro->dbh;
+  $oro->dbh(DBI->connect('...'));
+
+The DBI database handle.
+
 
 =head2 C<driver>
 
   print $oro->driver;
 
 The driver (e.g., 'SQLite') of the Oro instance.
+
+
+=head2 C<last_insert_id>
+
+  my $id = $oro->last_insert_id;
+
+Returns the globally last inserted id regarding to the database connection.
 
 
 =head2 C<last_sql>
@@ -1587,13 +1599,6 @@ This is for debugging purposes only - the returned SQL may not be
 valid due to reformating.
 
 B<The array return is EXPERIMENTAL and may change without warnings.>
-
-
-=head2 C<last_insert_id>
-
-  my $id = $oro->last_insert_id;
-
-Returns the globally last inserted id regarding to the database connection.
 
 
 =head1 METHODS
@@ -1916,6 +1921,17 @@ Fields can be column names or functions. With a colon you can define
 aliases for the field names.
 
 
+=head2 C<count>
+
+  my $persons = $oro->count('Person');
+  my $pauls   = $oro->count('Person' => { name => 'Paul' });
+
+Returns the number of rows of a table.
+Expects the table name and a hash ref with conditions,
+the rows have to fulfill.
+Caching can be applied as with L<select>.
+
+
 =head2 C<delete>
 
   my $rows = $oro->delete(Person => { id => 4 });
@@ -1927,17 +1943,6 @@ In case of scalar values, identity is tested for the condition.
 In case of array refs, it is tested, if the field is an element of the set.
 Restrictions can be applied as with L<select>.
 Returns the number of rows that were deleted.
-
-
-=head2 C<count>
-
-  my $persons = $oro->count('Person');
-  my $pauls   = $oro->count('Person' => { name => 'Paul' });
-
-Returns the number of rows of a table.
-Expects the table name and a hash ref with conditions,
-the rows have to fulfill.
-Caching can be applied as with L<select>.
 
 
 =head2 C<table>
@@ -1966,43 +1971,6 @@ or joined tables. Allows to omit the first table argument for the methods
 L<select>, L<load>, L<count> and - in case of non-joined-tables -
 for L<insert>, L<update>, L<merge>, and L<delete>.
 C<table> in conjunction with a joined table can be seen as an "ad hoc view".
-
-B<This method is EXPERIMENTAL and may change without warnings.>
-
-
-=head2 C<prep_and_exec>
-
-  my ($rv, $sth) = $oro->prep_and_exec(
-    'SELECT ? FROM Person', ['name'], 'cached'
-  );
-
-  if ($rv) {
-    my $row;
-    while ($row = $sth->fetchrow_hashref) {
-      print $row->{name};
-      if ($name eq 'Fry') {
-        $sth->finish;
-        last;
-      };
-    };
-  };
-
-Prepare and execute an SQL statement with all checkings.
-Returns the return value (on error C<false>, otherwise C<true>,
-e.g. the number of modified rows) and - in an array context -
-the statement handle.
-Accepts the SQL statement, parameters for binding in an array
-reference and optionally a boolean value, if the prepared
-statement should be cached by L<DBI>.
-
-
-=head2 C<explain>
-
-  print $oro->explain(
-    'SELECT ? FROM Person', ['name']
-  );
-
-Returns the query plan for a given query as a line-breaked string.
 
 B<This method is EXPERIMENTAL and may change without warnings.>
 
@@ -2041,6 +2009,43 @@ on the driver).
 
 Executes SQL code.
 This is a wrapper for the DBI C<do()> method (but fork- and thread-safe).
+
+
+=head2 C<explain>
+
+  print $oro->explain(
+    'SELECT ? FROM Person', ['name']
+  );
+
+Returns the query plan for a given query as a line-breaked string.
+
+B<This method is EXPERIMENTAL and may change without warnings.>
+
+
+=head2 C<prep_and_exec>
+
+  my ($rv, $sth) = $oro->prep_and_exec(
+    'SELECT ? FROM Person', ['name'], 'cached'
+  );
+
+  if ($rv) {
+    my $row;
+    while ($row = $sth->fetchrow_hashref) {
+      print $row->{name};
+      if ($name eq 'Fry') {
+        $sth->finish;
+        last;
+      };
+    };
+  };
+
+Prepare and execute an SQL statement with all checkings.
+Returns the return value (on error C<false>, otherwise C<true>,
+e.g. the number of modified rows) and - in an array context -
+the statement handle.
+Accepts the SQL statement, parameters for binding in an array
+reference and optionally a boolean value, if the prepared
+statement should be cached by L<DBI>.
 
 
 =head1 EVENTS
