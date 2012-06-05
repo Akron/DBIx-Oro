@@ -9,6 +9,12 @@ plan tests => 11;
 
 $|++;
 
+sub no_warn (&) {
+  local $SIG{__WARN__} = sub {};
+  $_[0]->();
+};
+
+
 use lib 'lib', '../lib', '../../lib';
 use_ok 'DBIx::Oro';
 

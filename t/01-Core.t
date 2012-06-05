@@ -4,10 +4,15 @@ use Data::Dumper 'Dumper';
 use strict;
 use warnings;
 
-plan tests => 83;
+plan tests => 86;
 
 
 $|++;
+
+sub no_warn (&) {
+  local $SIG{__WARN__} = sub {};
+  $_[0]->();
+};
 
 
 use lib 'lib', '../lib', '../../lib';
@@ -108,8 +113,7 @@ ok($oro->insert(Content => {
 
 ok($oro->dbh->disconnect, 'Disonnect');
 
-{
-  local $SIG{__WARN__} = sub {};
+no_warn {
   ok(!$oro->insert(Content => {
     title => 'Test', content => 'Value 2'
   }), 'Reconnect');
@@ -127,8 +131,7 @@ ok($oro = DBIx::Oro->new(
     };
   }), 'Init memory db');
 
-{
-  local $SIG{__WARN__} = sub {};
+no_warn {
 
   # Negative checks
   ok($oro->insert(Content => { title => 'Check!',
@@ -256,6 +259,13 @@ $oro->select('Name' => ['prename'] =>
 		 ok($_[0]->{prename}, 'Fields');
 	     });
 
+
+
+ok($oro->insert(Name => { prename => 'Ulli' }), 'Insert Ulli');
+
+is($oro->count('Name' => { surname => 'Sojolicious' } ), 1, 'Count');
+is($oro->count('Name' => { surname => undef } ), 1, 'Count');
+
 ok($oro->update( Content =>
 		   { content => 'Das ist der vierte content.' } =>
 		     { 'title' => 'Check!' }), # Changes two entries!
@@ -318,7 +328,6 @@ ok(!$oro->count(
     ['prename'] => {
       prename => 'Sabine'
     }), 'Ignore fields in Count');
-
 
 
 # Reformatting SQL

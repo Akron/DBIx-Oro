@@ -1226,6 +1226,8 @@ sub _get_pairs {
 
       # Element of
       elsif (ref $value eq 'ARRAY') {
+	# Undefined values in the array are not specified
+	# as ' IN (NULL, ...) does not work
 	push (@pairs, $key . ' IN (' . _q($value) . ')' ),
 	  push(@values, @$value);
       }

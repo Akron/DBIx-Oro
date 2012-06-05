@@ -9,6 +9,11 @@ plan tests => 4;
 
 $|++;
 
+sub no_warn (&) {
+  local $SIG{__WARN__} = sub {};
+  $_[0]->();
+};
+
 
 use lib 'lib', '../lib', '../../lib';
 use_ok 'DBIx::Oro';
@@ -51,8 +56,7 @@ ok(length($oro->explain(
      Name.id = Book.author_id AND
      author_id = ?', [4])) > 0, 'Explain');
 
-{
-  local $SIG{__WARN__} = sub {};
+no_warn {
   ok(!$oro->update(
     Name =>
       { prename => [qw/user name/], surname => 'xyz777'}
