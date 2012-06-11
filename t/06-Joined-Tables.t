@@ -176,6 +176,7 @@ my $select = $oro->select(
     }
 );
 
+
 is_deeply($select->[0], {
   'friend_prename' => 'Fry',
   'friend_age' => 30,

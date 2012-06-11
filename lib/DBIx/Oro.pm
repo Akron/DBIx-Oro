@@ -11,23 +11,26 @@ our @CARP_NOT;
 # Database connection
 use DBI;
 
-our $AS_REGEX       = qr/(?::~?[-_a-zA-Z0-9]+)/;
-our $OP_REGEX       = qr/^(?i:
-                            (?:[\<\>\!=]?\=?)|<>|
-                            (?:!|not[_ ])?
-                            (?:match|like|glob|regex|between)|
-			    (?:eq|ne|[gl][te]|not)
-                          )$/x;
+our $AS_REGEX = qr/(?::~?[-_a-zA-Z0-9]+)/;
+
+our $OP_REGEX = qr/^(?i:
+		     (?:[\<\>\!=]?\=?)|<>|
+		     (?:!|not[_ ])?
+		     (?:match|like|glob|regex|between)|
+		     (?:eq|ne|[gl][te]|not)
+		   )$/x;
 
 our $KEY_REGEX = qr/[_\.0-9a-zA-Z]+/;
 
-our $SFIELD_REGEX   =
+our $SFIELD_REGEX =
   qr/(?:$KEY_REGEX|(?:$KEY_REGEX\.)?\*|"[^"]*"|'[^']*')/;
 
+our $FIELD_OP_RE = qr/[-+\/\%\*,]/;
+
 our $FUNCTION_REGEX =
-  qr/([_a-zA-Z0-9]+
+  qr/([_a-zA-Z0-9]*
       \(\s*(?:$SFIELD_REGEX|(?-1))
-           (?:,\s*(?:$SFIELD_REGEX|(?-1)))*\s*\))/x;
+           (?:\s*$FIELD_OP_RE\s*(?:$SFIELD_REGEX|(?-1)))*\s*\))/x;
 
 our $VALID_FIELD_REGEX =
   qr/^(?:$SFIELD_REGEX|$FUNCTION_REGEX)$AS_REGEX?$/;
@@ -85,6 +88,10 @@ sub new {
   # On_connect event
   my $on_connect = delete $param{on_connect};
 
+  # Import SQL file
+  my $import    = delete $param{import};
+  my $import_cb = delete $param{import_cb};
+
   # Get driver specific handle
   $self = $package->new( %param );
 
@@ -100,6 +107,7 @@ sub new {
   # On connect events
   $self->{on_connect} = {};
   $self->{_connect_cb} = 1;
+
   if ($on_connect) {
     $self->on_connect(
       ref $on_connect eq 'HASH' ?
@@ -110,12 +118,43 @@ sub new {
   # Connect to database
   $self->_connect or croak 'Unable to connect to database';
 
-  # Release callback
-  $cb->($self) if $cb && $self->created;
-
   # Savepoint array
   # First element is a counter
   $self->{savepoint} = [1];
+
+  # Initialize database if newly created
+  if ($self->created && ($import || $cb)) {
+
+    # Start creation transaction
+    unless (
+      $self->txn(
+	sub {
+
+	  # Import SQL file
+	  if ($import) {
+	    $self->import_sql($import, $import_cb) or return -1;
+	  };
+
+	  # Release callback
+	  $cb->($self) if $cb;
+
+	  return 1;
+	})
+    ) {
+
+      # SQLite database
+      if ($self->driver eq 'SQLite' &&
+	    $self->file &&
+	      index($self->file, ':') != 0) {
+	unlink $self->file;
+      };
+
+      # Not successful
+      $self = undef;
+      return;
+    };
+  };
+
 
   # Return Oro instance
   $self;
@@ -977,6 +1016,7 @@ sub _connect {
 
 
 # Password closure should prevent accidentally overt passwords
+# Todo: Does this work with multiple Objects?
 {
   # Password hash
   my %pwd;
@@ -1013,6 +1053,74 @@ sub _connect {
       };
     };
   };
+};
+
+
+# Import files
+sub import_sql {
+  my $self = shift;
+
+  # Get callback
+  my $cb = pop @_ if ref $_[-1] && ref $_[-1] eq 'CODE';
+
+  my $files = @_ > 1 ? \@_ : shift;
+
+  # Import subroutine
+  my $import = sub {
+    my $file = shift;
+
+    # No file given
+    return unless $file;
+
+    if (open(SQL, '<:utf8', $file )) {
+      my @sql = split(/^--\s-.*?$/m, join('', <SQL>));
+      close(SQL);
+
+      # Start transaction
+      return $self->txn(
+	sub {
+	  my ($sql, @sql_seq);;
+	  foreach $sql (@sql) {
+	    $sql =~ s/^(?:--.*?|\s*)?$//mg;
+	    $sql =~ s/\n\n+/\n/sg;
+
+	    # Use callback
+	    @sql_seq = $cb->($sql) if $cb && $sql;
+
+	    next unless $sql;
+
+	    # Start import
+	    foreach (@sql_seq) {
+	      $self->do($_) or return -1;
+	    };
+	  };
+	}
+      );
+    }
+
+    # Unable to read SQL file
+    else {
+      carp "Unable to import file '$file'";
+      return;
+    };
+  };
+
+  # Multiple file import
+  if (ref $files) {
+    return $self->txn(
+      sub {
+	foreach (@$files) {
+	  $import->($_) or return -1;
+	};
+      });
+  }
+
+  # Single file import
+  else {
+    return $import->($files);
+  };
+
+  return;
 };
 
 
@@ -1140,7 +1248,7 @@ sub _join_tables {
 
 	      # Field is a function
 	      else {
-		s/([\(,]\s*)($KEY_REGEX)(\s*[,\)])/$1$prefix\.$2$3/og
+		s/((?:\(|$FIELD_OP_RE)\s*)($KEY_REGEX)(\s*(?:$FIELD_OP_RE|\)))/$1$prefix\.$2$3/og
 	      };
 	    };
 
@@ -1614,7 +1722,7 @@ B<The array return is EXPERIMENTAL and may change without warnings.>
           name  TEXT NOT NULL,
           age   INTEGER
       )');
-  })
+  });
 
 Creates a new Oro database handle.
 If only a string value is given, this will default to
@@ -1764,7 +1872,7 @@ special restriction parameters:
       -group    => [age => { age => { gt => 42 } }]
       -offset   => 1,
       -limit    => 5,
-      -distinct => 1,
+      -distinct => 1
     }
   );
 
@@ -1997,6 +2105,25 @@ Otherwise the actions will be released.
 Transactions established with this method can be securely nested
 (although inner transactions may not be true transactions depending
 on the driver).
+
+
+=head2 C<import_sql>
+
+  my $oro = DBIx::Oro->new(
+    driver => 'SQLite',
+    file   => ':memory:,
+    import => ['myschema.sql', 'mydata.sql']
+  );
+
+  $oro->import_sql('mydb.sql');
+  $oro->import_sql(qw/myschema.sql mydata.sql/);
+  $oro->import_sql(['myschema.sql', 'mydata.sql']);
+
+Loads a single or multiple SQL documents (utf-8) and applies
+all statements sequentially. Each statement has to be delimited
+using one comment line starting with C<-- ->.
+
+B<This method is EXPERIMENTAL and may change without warnings.>
 
 
 =head2 C<do>

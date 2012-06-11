@@ -4,7 +4,7 @@ use Data::Dumper 'Dumper';
 use strict;
 use warnings;
 
-plan tests => 5;
+plan tests => 9;
 
 
 $|++;
@@ -40,5 +40,30 @@ is($oro->load(
     Name => ['ltrim(lower(prename),"a"):prename'] => {}
   ]
 )->{prename}, 'kron', 'Select with lower and ltrim in joined table');
+
+
+ok($oro->do('CREATE TABLE Product (
+   id    INTEGER PRIMARY KEY,
+   name  TEXT,
+   cost  REAL,
+   tax   REAL
+ )'), 'Create Table');
+
+ok($oro->insert(Product => {
+  name => 'Book',
+  cost => 29.9,
+  tax  => 10
+}), 'Insert Product');
+
+my $book = $oro->load(
+  Product => [
+    'name',
+    'cost',
+    '(cost * (tax / 100)):tax_total'
+  ]);
+
+ok($book, 'Book loaded');
+is($book->{tax_total}, 2.99, 'Tax total');
+
 
 1;

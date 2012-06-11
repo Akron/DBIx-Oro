@@ -1,5 +1,8 @@
 0.22 2012-06-04
         - Added autocommit method to SQLite driver.
+	- improved Constructor method for SQLite files.
+	- Introduces import_sql method and constructor parameter.
+	- Improved field syntax.
 
 0.21 2012-05-31
         - Moved Sojolicious::Oro to DBIx::Oro.
