@@ -136,16 +136,14 @@ sub new {
 	  };
 
 	  # Release callback
-	  $cb->($self) if $cb;
-
+	  return $cb->($self) if $cb;
 	  return 1;
 	})
     ) {
 
       # SQLite database
       if ($self->driver eq 'SQLite' &&
-	    $self->file &&
-	      index($self->file, ':') != 0) {
+	    index($self->file, ':') != 0) {
 	unlink $self->file;
       };
 
@@ -154,7 +152,6 @@ sub new {
       return;
     };
   };
-
 
   # Return Oro instance
   $self;
@@ -165,24 +162,23 @@ sub new {
 sub table {
   my $self = shift;
 
-  my %param;
   # Joined table
-  $param{table} = do {
-    if (ref($_[0])) {
-      [ _join_tables( shift(@_) ) ];
-    }
+  my %param = (
+    table => do {
+      if (ref($_[0])) {
+	[ _join_tables( shift(@_) ) ];
+      }
 
-    # Table name
-    else {
-      shift;
-    };
-  };
+      # Table name
+      else {
+	shift;
+      };
+    }
+  );
 
   # Clone parameters
-  foreach (qw/dbh created in_txn
-              savepoint pid tid
-	      dsn _connect_cb
-	      on_connect/) {
+  foreach (qw/dbh created in_txn savepoint pid tid
+	      dsn _connect_cb on_connect/) {
     $param{$_} = $self->{$_};
   };
 
@@ -380,7 +376,7 @@ sub update {
   return unless @$pairs;
 
   # No arrays or operators allowed
-  return unless $pairs ~~ /^$KEY_REGEX\s+(?:=|IS)/o;
+  return unless $pairs ~~ /^$KEY_REGEX\s+(?:=|IS\s)/o;
 
   # Set undef to pairs
   my @pairs = map { $_ =~ s{ IS NULL$}{ = NULL}io; $_ } @$pairs;
@@ -472,6 +468,8 @@ sub select {
   # Check cache
   my ($chi, $key, $chi_param);
   if ($prep && $prep->{cache}) {
+
+    # Cache parameters
     ($chi, $key, $chi_param) = @{delete $prep->{cache}};
 
     # Generate key
@@ -595,11 +593,12 @@ sub load {
   # Has a condition
   if ($param[-1] && ref($param[-1])) {
 
-    # Add limitation t the condition
+    # Add limitation to the condition
     if (ref($param[-1]) eq 'HASH') {
       $param[-1]->{-limit} = 1;
     }
 
+    # Load is malformed
     elsif (ref($param[-1]) ne 'ARRAY') {
       carp 'Load is malformed';
       return;
@@ -709,8 +708,9 @@ sub count {
   my @pairs = @$join_pairs;
 
   # Build sql
-  my $sql = 'SELECT ' . join(', ', 'count(1)', @$fields) .
-            ' FROM '  . join(', ', @$tables);
+  my $sql =
+    'SELECT ' . join(', ', 'count(1)', @$fields) .
+      ' FROM '  . join(', ', @$tables);
 
   # Ignore fields
   shift if $_[0] && ref $_[0] eq 'ARRAY';
@@ -731,6 +731,8 @@ sub count {
   # Check cache
   my ($chi, $key, $chi_param);
   if ($prep && $prep->{cache}) {
+
+    # Cache parameters
     ($chi, $key, $chi_param) = @{$prep->{cache}};
 
     # Generate key
@@ -825,6 +827,8 @@ sub prep_and_exec {
 # Wrapper for DBI do
 sub do {
   $_[0]->{last_sql} = $_[1];
+
+  # Database connection
   my $dbh = shift->dbh;
   my (@rv) = $dbh->do( @_ );
 
@@ -879,7 +883,7 @@ sub txn {
     my $sp_array = $self->{savepoint};
 
     # Use PID for concurrent accesses
-    my $sp = 'orosp_' . $$ . '_';
+    my $sp = "orosp_${$}_";
 
     # Use TID for concurrent accesses
     $sp .= threads->tid . '_' if $self->{tid};
@@ -922,7 +926,7 @@ sub txn {
 # Add connect event
 sub on_connect {
   my $self = shift;
-  my $cb = pop;
+  my $cb   = pop;
 
   # Parameter is no subroutine
   return unless ref $cb && ref $cb eq 'CODE';
@@ -943,6 +947,72 @@ sub on_connect {
 # Wrapper for DBI last_insert_id
 sub last_insert_id {
   $_[0]->dbh->last_insert_id;
+};
+
+
+# Import files
+sub import_sql {
+  my $self = shift;
+
+  # Get callback
+  my $cb = pop @_ if ref $_[-1] && ref $_[-1] eq 'CODE';
+
+  my $files = @_ > 1 ? \@_ : shift;
+
+  return unless $files;
+
+  # Import subroutine
+  my $import = sub {
+    my $file = shift;
+
+    # No file given
+    return unless $file;
+
+    if (open(SQL, '<:utf8', $file )) {
+      my @sql = split(/^--\s-.*?$/m, join('', <SQL>));
+      close(SQL);
+
+      # Start transaction
+      return $self->txn(
+	sub {
+	  my ($sql, @sql_seq);;
+	  foreach $sql (@sql) {
+	    $sql =~ s/^(?:--.*?|\s*)?$//mg;
+	    $sql =~ s/\n\n+/\n/sg;
+
+	    # Use callback
+	    @sql_seq = $cb->($sql) if $cb && $sql;
+
+	    next unless $sql;
+
+	    # Start import
+	    foreach (@sql_seq) {
+	      $self->do($_) or return -1;
+	    };
+	  };
+	}
+      );
+    }
+
+    # Unable to read SQL file
+    else {
+      carp "Unable to import file '$file'";
+      return;
+    };
+  };
+
+  # Multiple file import
+  if (ref $files) {
+    return $self->txn(
+      sub {
+	foreach (@$files) {
+	  $import->($_) or return -1;
+	};
+      });
+  };
+
+  # Single file import
+  return $import->($files);
 };
 
 
@@ -1016,7 +1086,6 @@ sub _connect {
 
 
 # Password closure should prevent accidentally overt passwords
-# Todo: Does this work with multiple Objects?
 {
   # Password hash
   my %pwd;
@@ -1053,74 +1122,6 @@ sub _connect {
       };
     };
   };
-};
-
-
-# Import files
-sub import_sql {
-  my $self = shift;
-
-  # Get callback
-  my $cb = pop @_ if ref $_[-1] && ref $_[-1] eq 'CODE';
-
-  my $files = @_ > 1 ? \@_ : shift;
-
-  # Import subroutine
-  my $import = sub {
-    my $file = shift;
-
-    # No file given
-    return unless $file;
-
-    if (open(SQL, '<:utf8', $file )) {
-      my @sql = split(/^--\s-.*?$/m, join('', <SQL>));
-      close(SQL);
-
-      # Start transaction
-      return $self->txn(
-	sub {
-	  my ($sql, @sql_seq);;
-	  foreach $sql (@sql) {
-	    $sql =~ s/^(?:--.*?|\s*)?$//mg;
-	    $sql =~ s/\n\n+/\n/sg;
-
-	    # Use callback
-	    @sql_seq = $cb->($sql) if $cb && $sql;
-
-	    next unless $sql;
-
-	    # Start import
-	    foreach (@sql_seq) {
-	      $self->do($_) or return -1;
-	    };
-	  };
-	}
-      );
-    }
-
-    # Unable to read SQL file
-    else {
-      carp "Unable to import file '$file'";
-      return;
-    };
-  };
-
-  # Multiple file import
-  if (ref $files) {
-    return $self->txn(
-      sub {
-	foreach (@$files) {
-	  $import->($_) or return -1;
-	};
-      });
-  }
-
-  # Single file import
-  else {
-    return $import->($files);
-  };
-
-  return;
 };
 
 
@@ -1417,6 +1418,7 @@ sub _get_pairs {
 
 	my @field_array;
 
+	# Check group values
 	foreach (ref $value ? @$value : $value) {
 
 	  # Valid order/group_by value
@@ -1440,7 +1442,7 @@ sub _get_pairs {
 
 	# Check chi existence
 	if ($chi) {
-	  $prep{cache} = [$chi, delete $value->{key} // '', $value];
+	  $prep{cache} = [ $chi, delete $value->{key} // '', $value ];
 	}
 
 	# No chi given
@@ -1501,14 +1503,14 @@ sub _fields {
 	# Explicite field alias
 	if ($_ =~ $FIELD_REST_RE) {
 
-	  # ~ indicates rather not explicite
+	  # ~ indicates rather not explicite alias
 	  $alias{$3} = 1 if $2 eq ':';
-	  qq{$1 AS "$3"};
+	  qq{$1 AS `$3`};
 	}
 
 	# Implicite field alias
 	elsif (m/^(?:.+?)\.(?:[^\.]+?)$/) {
-	  $_ . ' AS "' . _clean_alias $_ . '"';
+	  $_ . ' AS `' . _clean_alias $_ . '`';
 	}
 
 	# Field value

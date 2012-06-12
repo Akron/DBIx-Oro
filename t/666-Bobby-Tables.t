@@ -4,7 +4,7 @@ use Data::Dumper 'Dumper';
 use strict;
 use warnings;
 
-plan tests => 11;
+plan tests => 12;
 
 
 $|++;
@@ -99,6 +99,15 @@ $oro->txn(
 
   like($oro->last_sql, qr/^\s*SELECT title, year FROM Book\s*$/i, 'Clean sql');
 }
+
+
+ok($oro->update(
+  Name => {
+    prename => 'ISALL'
+  } => {
+    surname => 'Fuxfell'
+  }
+), 'Update with IS');
 
 __END__
 
