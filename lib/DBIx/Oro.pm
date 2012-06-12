@@ -5,6 +5,7 @@ use warnings;
 our $VERSION = '0.22';
 
 use v5.10.1;
+
 use Carp qw/carp croak/;
 our @CARP_NOT;
 
@@ -25,17 +26,17 @@ our $KEY_REGEX = qr/[_\.0-9a-zA-Z]+/;
 our $SFIELD_REGEX =
   qr/(?:$KEY_REGEX|(?:$KEY_REGEX\.)?\*|"[^"]*"|'[^']*')/;
 
-our $FIELD_OP_RE = qr/[-+\/\%\*,]/;
+our $FIELD_OP_REGEX = qr/[-\+\/\%\*,]/;
 
 our $FUNCTION_REGEX =
   qr/([_a-zA-Z0-9]*
       \(\s*(?:$SFIELD_REGEX|(?-1))
-           (?:\s*$FIELD_OP_RE\s*(?:$SFIELD_REGEX|(?-1)))*\s*\))/x;
+           (?:\s*$FIELD_OP_REGEX\s*(?:$SFIELD_REGEX|(?-1)))*\s*\))/x;
 
 our $VALID_FIELD_REGEX =
   qr/^(?:$SFIELD_REGEX|$FUNCTION_REGEX)$AS_REGEX?$/;
 
-our $VALID_GROUPORDER_RE =
+our $VALID_GROUPORDER_REGEX =
   qr/^[-\+]?(?:$KEY_REGEX|$FUNCTION_REGEX)$/;
 
 our $FIELD_REST_RE = qr/^(.+?)(:~?)([^:"~][^:"]*?)$/;
@@ -64,9 +65,8 @@ sub new {
   };
 
   # Init by default
-  # Todo: in_txn has to be a reference
-  @param{qw/in_txn last_sql/} = (0, '');
-
+  ${$param{in_txn}} = 0;
+  $param{last_sql} = '';
   $param{created} //= 0;
 
   # Get callback
@@ -202,7 +202,7 @@ sub dbh {
   # Store new database handle
   return ($self->{dbh} = shift) if $_[0];
 
-  return $self->{dbh} if $self->{in_txn};
+  return $self->{dbh} if ${$self->{in_txn}};
 
   state $c = 'Unable to connect to database';
 
@@ -855,25 +855,25 @@ sub txn {
     # Start new transaction
     $dbh->begin_work;
 
-    $self->{in_txn} = 1;
+    ${$self->{in_txn}} = 1;
 
     # start
     my $rv = $_[0]->($self);
     if (!$rv || $rv != -1) {
-      $self->{in_txn} = 0;
+      ${$self->{in_txn}} = 0;
       $dbh->commit;
       return 1;
     };
 
     # Rollback
-    $self->{in_txn} = 0;
+    ${$self->{in_txn}} = 0;
     $dbh->rollback;
     return;
   }
 
   # Inside transaction
   else {
-    $self->{in_txn} = 1;
+    ${$self->{in_txn}} = 1;
 
     # Push savepoint on stack
     my $sp_array = $self->{savepoint};
@@ -1248,7 +1248,8 @@ sub _join_tables {
 
 	      # Field is a function
 	      else {
-		s/((?:\(|$FIELD_OP_RE)\s*)($KEY_REGEX)(\s*(?:$FIELD_OP_RE|\)))/$1$prefix\.$2$3/og
+		s/((?:\(|$FIELD_OP_REGEX)\s*)($KEY_REGEX)
+                  (\s*(?:$FIELD_OP_REGEX|\)))/$1$prefix\.$2$3/ogx;
 	      };
 	    };
 
@@ -1419,7 +1420,7 @@ sub _get_pairs {
 	foreach (ref $value ? @$value : $value) {
 
 	  # Valid order/group_by value
-	  if ($_ =~ $VALID_GROUPORDER_RE) {
+	  if ($_ =~ $VALID_GROUPORDER_REGEX) {
 	    s/^([\-\+])//o;
 	    push(@field_array, $1 && $1 eq '-' ? "$_ DESC" : $_ );
 	  }

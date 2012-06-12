@@ -66,4 +66,6 @@ ok($book, 'Book loaded');
 is($book->{tax_total}, 2.99, 'Tax total');
 
 
+# Todo: Test for 'NOT'
+
 1;

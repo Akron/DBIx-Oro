@@ -3,6 +3,7 @@
 	- improved Constructor method for SQLite files.
 	- Introduces import_sql method and constructor parameter.
 	- Improved field syntax.
+        - Fixed a small bug regarding in_txn.
 
 0.21 2012-05-31
         - Moved Sojolicious::Oro to DBIx::Oro.

@@ -643,7 +643,7 @@ sub autocommit {
 	${$self->{_autocounter}} = 0;
 	$dbh->commit;
       };
-      $dbh->{AutoCommit} = 1 unless $self->{in_txn};
+      $dbh->{AutoCommit} = 1 unless ${$self->{in_txn}};
       return 1;
     }
 
@@ -666,7 +666,7 @@ sub _decr_commit {
     # Commit is null
     unless ($auto) {
 
-      $self->dbh->commit unless $self->{in_txn};
+      $self->dbh->commit unless ${$self->{in_txn}};
       ${$self->{_autocounter}} = ${$self->{autocommit}};
     };
   };
