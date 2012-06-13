@@ -6,6 +6,7 @@ our $VERSION = '0.22';
 
 use v5.10.1;
 
+use Scalar::Util qw/blessed/;
 use Carp qw/carp croak/;
 our @CARP_NOT;
 
@@ -1332,6 +1333,7 @@ sub _get_pairs {
 
 	# Simple value
 	else {
+
 	  push(@pairs, "$key = ?"),
 	    push(@values, $value);
 	}
@@ -1365,6 +1367,12 @@ sub _get_pairs {
 	    if (index($op, 'BETWEEN') == -1) {
 	      my $p = "$key $op ";
 
+	      # Value is an object
+	      if (blessed $val) {
+		$val = _stringify($val) or
+		  carp "Unknown Oro value $key $op $val" and next;
+	      };
+
 	      # Defined value
 	      if (defined $val) {
 		$p .= '?';
@@ -1384,12 +1392,24 @@ sub _get_pairs {
 	      push(@pairs, "$key $op ? AND ?"),
 		push(@values, @{$val}[0, 1]);
 	    };
+	  } else {
+	    carp "Unknown Oro operator $key $op $val" and next;
 	  }
 	}
       }
 
+      # Stringifiable object
+      elsif ($value = _stringify($value)) {
+
+	warn 'Hihi'. $value;
+
+	push(@pairs, "$key = ?"),
+	  push(@values, $value);
+      }
+
+      # Unknown pair
       else {
-	carp "Unknown operator $key" and next;
+	carp "Unknown Oro pair $key, $value" and next;
       };
     }
 
@@ -1574,6 +1594,15 @@ sub _restrictions {
   $sql;
 };
 
+
+# Check for stringification of values
+sub _stringify {
+  my $ref = blessed $_[0];
+  if ($ref ne ($_ = "$_[0]")) {
+    return $_;
+  };
+  undef;
+}
 
 # Clean alias string
 sub _clean_alias {
