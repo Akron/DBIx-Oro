@@ -15,5 +15,4 @@ t/test_db.pl
 t/MySQL
 t/SQLite
 t-*
-lib/DBIx/Oro/Driver/MySQL.pm
 !.gitignore

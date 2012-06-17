@@ -2296,7 +2296,7 @@ Oro manually, using
 
 By default, C<make test> will test all common and driver specific
 tests for the SQLite driver.
-By using C<make test TEST_DB={Drivername}> all common and driver specific
+By using C<make test TEST_DB={Driver}> all common and driver specific
 tests for the given driver are run, e.g. C<make test TEST_DB=MySQL>.
 The constructor information can be written as a perl data structure
 in C<t/test_db.pl>, for example:

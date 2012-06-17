@@ -2,6 +2,7 @@
         - Improved MySQL support.
         - Made testsuite work with different databases.
         - Added TEST_DB flag for make test.
+        - Added MySQL driver.
 
 0.22 2012-06-13
         - Added autocommit method to SQLite driver.
