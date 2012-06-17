@@ -5,7 +5,6 @@ use warnings;
 our $VERSION = '0.23';
 
 # See the bottom of this file for the POD documentation.
-# Search for the string '=pod'.
 
 use v5.10.1;
 
@@ -1257,11 +1256,9 @@ sub _join_tables {
 	    # Is a reference
 	    unless (ref $_) {
 
-	      my $clean = _clean_alias($_);
-
 	      # Set alias semi explicitely
 	      if (index($_, ':') == -1) {
-		$_ .= ':~' . $f_prefix . $clean;
+		$_ .= ':~' . $f_prefix . _clean_alias($_);
 	      };
 
 	      # Field is not a function
@@ -1290,7 +1287,7 @@ sub _join_tables {
 	  $field_alias{$key} = $alias{$key} = $val ;
 	};
 
-	# Todo: only use alias if necessary, as they can't be used in WHERE!
+	# TODO: only use alias if necessary, as they can't be used in WHERE!
 
 	push(@fields, $fields) if $fields;
       }
@@ -1307,7 +1304,7 @@ sub _join_tables {
 	# Add database fields to marker hash
 	while (my ($key, $value) = each %$hash) {
 
-	  # Todo: Does this work?
+	  # TODO: Does this work?
 	  unless ($alias{$key}) {
 	    $key = "$prefix.$key";
 	  }
@@ -1764,7 +1761,7 @@ The driver (e.g., 'SQLite') of the Oro instance.
 
   my $id = $oro->last_insert_id;
 
-Returns the globally last inserted id regarding to the database connection.
+Returns the globally last inserted id regarding the database connection.
 
 
 =head2 C<last_sql>
@@ -2283,13 +2280,14 @@ L<Carp>,
 L<DBI>,
 L<DBD::SQLite>,
 L<File::Path>,
-L<File::Basename>.
+L<File::Basename>,
+L<Scalar::Util>.
 
 
 =head1 INSTALL
 
 When not installing via package manager or CPAN, you can install
-DBIx::Oro manually, using
+Oro manually, using
 
   $ perl Makefile.PL
   $ make
@@ -2298,10 +2296,10 @@ DBIx::Oro manually, using
 
 By default, C<make test> will test all common and driver specific
 tests for the SQLite driver.
-By using C<make test -e TEST_DB=MySQL> all common and driver specific
-tests for the MySQL driver are run.
-The database information (all information necessary for Oro::new can
-be written as a perl data structure in C<t/test_db.pl>, for example:
+By using C<make test TEST_DB={Drivername}> all common and driver specific
+tests for the given driver are run, e.g. C<make test TEST_DB=MySQL>.
+The constructor information can be written as a perl data structure
+in C<t/test_db.pl>, for example:
 
   {
     MySQL => {

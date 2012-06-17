@@ -2,7 +2,8 @@ package DBIx::Oro::Driver::SQLite;
 use strict;
 use warnings;
 use DBIx::Oro;
-our @ISA = 'DBIx::Oro';
+our @ISA;
+BEGIN { @ISA = 'DBIx::Oro' };
 
 use v5.10.1;
 
