@@ -2,7 +2,10 @@ package DBIx::Oro;
 use strict;
 use warnings;
 
-our $VERSION = '0.22';
+our $VERSION = '0.23';
+
+# See the bottom of this file for the POD documentation.
+# Search for the string '=pod'.
 
 use v5.10.1;
 
@@ -228,13 +231,17 @@ sub last_sql {
   my $last_sql = $self->{last_sql};
 
   # Check for recurrent placeholders
-  if ($last_sql =~ m/(?:UNION|\?(?:, \?){3,})/) {
+  if ($last_sql =~ m/(?:UNION|\?(?:, \?){3,}|(?:\(\?(?:, \?)*\), ){3,})/) {
 
     our $c;
 
     # Count Union selects
     state $UNION_RE =
       qr/(?{$c=1})(SELECT \?(?:, \?)*)(?: UNION \1(?{$c++})){3,}/;
+
+    # Count Union selects
+    state $BRACKET_RE =
+      qr/(?{$c=1})(\(\?(?:, \?)*\))(?:, \1(?{$c++})){3,}/;
 
     # Count recurring placeholders
     state $PLACEHOLDER_RE =
@@ -243,6 +250,7 @@ sub last_sql {
     # Rewrite placeholders with count
     for ($last_sql) {
       s/$UNION_RE/WITH $c x UNION $1/og;
+      s/$BRACKET_RE/$c x $1/og;
       s/$PLACEHOLDER_RE/$c x ?/og;
     };
   };
@@ -286,16 +294,6 @@ sub insert {
   # Properties
   my $prop = shift if ref $_[0] eq 'HASH' && ref $_[1];
 
-  # Create insert string
-  my $sql = 'INSERT ';
-
-  if ($prop) {
-    given ($prop->{-on_conflict}) {
-      when ('replace') { $sql = 'REPLACE '};
-      when ('ignore')  { $sql .= 'IGNORE '};
-    };
-  };
-
   # Single insert
   if (ref $_[0] eq 'HASH') {
 
@@ -307,7 +305,18 @@ sub insert {
 
     while (my ($key, $value) = each %param) {
       next unless $key =~ $KEY_REGEX;
-      push(@keys, $key), push(@values, $value);
+      push(@keys, $key);
+      push(@values, $value);
+    };
+
+    # Create insert string
+    my $sql = 'INSERT ';
+
+    if ($prop) {
+      given ($prop->{-on_conflict}) {
+	when ('replace') { $sql = 'REPLACE '};
+	when ('ignore')  { $sql .= 'IGNORE '};
+      };
     };
 
     $sql .= 'INTO ' . $table .
@@ -337,16 +346,19 @@ sub insert {
 
       # Has default value
       my ($key, $value) = @{ splice( @keys, $i, 1) };
-      push(@default_keys, $key), push(@default, $value);
+      push(@default_keys, $key);
+      push(@default, $value);
     };
 
     # Unshift default keys to front
     unshift(@keys, @default_keys);
 
-    $sql .= 'INTO ' . $table . ' (' . join(', ', @keys) . ') ';
+    my $sql .= 'INSERT INTO ' . $table .
+      ' (' . join(', ', @keys) . ') ' .
+	'VALUES ';
 
     # Add data in brackets
-    $sql .= _q(\@keys) x ( scalar(@_) - 1 );
+    $sql .= join(', ', ('(' ._q(\@keys) . ')') x scalar @_ );
 
     # Prepare and execute with prepended defaults
     return $self->prep_and_exec(
@@ -414,7 +426,9 @@ sub select {
 
   # Get table object
   my ($tables, $fields,
-      $join_pairs, $treatment) = _table_obj($self, \@_);
+      $join_pairs,
+      $treatment,
+      $field_alias) = _table_obj($self, \@_);
 
   my @pairs = @$join_pairs;
 
@@ -444,7 +458,7 @@ sub select {
     # Condition
     my ($pairs, $values);
     if ($_[0] && ref($_[0]) eq 'HASH') {
-      ($pairs, $values, $prep) = _get_pairs( shift(@_) );
+      ($pairs, $values, $prep) = _get_pairs( shift(@_), $field_alias);
 
       push(@values, @$values);
 
@@ -704,8 +718,9 @@ sub count {
   my $self  = shift;
 
   # Init arrays
-  my ($tables, $fields, $join_pairs, $treatment) =
+  my ($tables, $fields, $join_pairs, $treatment, $field_alias) =
     _table_obj($self, \@_);
+
   my @pairs = @$join_pairs;
 
   # Build sql
@@ -719,7 +734,7 @@ sub count {
   # Get conditions
   my ($pairs, $values, $prep);
   if ($_[0] && ref $_[0] eq 'HASH') {
-    ($pairs, $values, $prep) = _get_pairs( shift(@_) );
+    ($pairs, $values, $prep) = _get_pairs( shift(@_), $field_alias );
     push(@pairs, @$pairs) if $pairs->[0];
   };
 
@@ -754,10 +769,10 @@ sub count {
   my ($rv, $sth) = $self->prep_and_exec($sql, $values || []);
 
   # Return value is empty
-  return 0 if !$rv || $rv ne '0E0';
+  return 0 if !$rv;
 
   # Return count
-  $result = $sth->fetchrow_arrayref->[0];
+  $result = $sth->fetchrow_arrayref->[0] || 0;
   $sth->finish;
 
   # Save to cache
@@ -947,7 +962,9 @@ sub on_connect {
 
 # Wrapper for DBI last_insert_id
 sub last_insert_id {
-  $_[0]->dbh->last_insert_id;
+  my $dbh = shift->dbh;
+  @_ = (undef) x 4 unless @_;
+  $dbh->last_insert_id(@_);
 };
 
 
@@ -969,7 +986,7 @@ sub import_sql {
     # No file given
     return unless $file;
 
-    if (open(SQL, '<:utf8', $file )) {
+    if (open(SQL, '<:utf8', $file)) {
       my @sql = split(/^--\s-.*?$/m, join('', <SQL>));
       close(SQL);
 
@@ -1193,6 +1210,7 @@ sub _join_tables {
   my @join = @{ shift @_ };
 
   my (@tables, @fields, @pairs, $treatment);
+  my %field_alias;
   my %marker;
 
   # Parse table array
@@ -1222,6 +1240,7 @@ sub _join_tables {
 
 	my $f_prefix = '';
 
+	# Has a hash next to it
 	if (ref $join[0] && ref $join[0] eq 'HASH') {
 
 	  # Set Prefix if given.
@@ -1238,9 +1257,11 @@ sub _join_tables {
 	    # Is a reference
 	    unless (ref $_) {
 
+	      my $clean = _clean_alias($_);
+
 	      # Set alias semi explicitely
 	      if (index($_, ':') == -1) {
-		$_ .= ':~' . $f_prefix . _clean_alias($_);
+		$_ .= ':~' . $f_prefix . $clean;
 	      };
 
 	      # Field is not a function
@@ -1253,6 +1274,7 @@ sub _join_tables {
 		s/((?:\(|$FIELD_OP_REGEX)\s*)($KEY_REGEX)
                   (\s*(?:$FIELD_OP_REGEX|\)))/$1$prefix\.$2$3/ogx;
 	      };
+
 	    };
 
 	    $_;
@@ -1263,7 +1285,12 @@ sub _join_tables {
 	(my $fields, $treatment, my $alias) = _fields($t_alias, $reformat);
 
 	# Set alias for markers
-	$alias{$_} = 1 foreach keys %$alias;
+	# $alias{$_} = 1 foreach keys %$alias;
+	while (my ($key, $val) = each %$alias) {
+	  $field_alias{$key} = $alias{$key} = $val ;
+	};
+
+	# Todo: only use alias if necessary, as they can't be used in WHERE!
 
 	push(@fields, $fields) if $fields;
       }
@@ -1280,7 +1307,13 @@ sub _join_tables {
 	# Add database fields to marker hash
 	while (my ($key, $value) = each %$hash) {
 
-	  $key = "$prefix.$key" unless $alias{$key};
+	  # Todo: Does this work?
+	  unless ($alias{$key}) {
+	    $key = "$prefix.$key";
+	  }
+	  else {
+	    $key = $alias{$key};
+	  };
 
 	  # Prefix, if not an explicite alias
 	  foreach (ref $value ? @$value : $value) {
@@ -1306,13 +1339,16 @@ sub _join_tables {
   };
 
   # Return join initialised values
-  return (\@tables, \@fields, \@pairs, $treatment);
+  return (\@tables, \@fields, \@pairs, $treatment, \%field_alias);
 };
 
 
 # Get pairs and values
 sub _get_pairs {
   my (@pairs, @values, %prep);
+
+  # Get alias for fields
+  my $alias = @_ == 2 ? pop @_ : {};
 
   while (my ($key, $value) = each %{ $_[0] }) {
 
@@ -1322,6 +1358,8 @@ sub _get_pairs {
     };
 
     if (substr($key, 0, 1) ne '-') {
+
+      $key = exists $alias->{$key} ? $alias->{$key} : $key;
 
       # Equality
       unless (ref $value) {
@@ -1361,6 +1399,7 @@ sub _get_pairs {
 
 	      # Translate literal compare operators
 	      tr/GLENTQ/><=!/d if $_ =~ m/^(?:[GL][TE]|NE|EQ)$/o;
+	      s/==/=/o;
 	    };
 
 	    # Simple operator
@@ -1401,8 +1440,7 @@ sub _get_pairs {
       # Stringifiable object
       elsif ($value = _stringify($value)) {
 
-	warn 'Hihi'. $value;
-
+	# Simple object
 	push(@pairs, "$key = ?"),
 	  push(@values, $value);
       }
@@ -1524,13 +1562,17 @@ sub _fields {
 	if ($_ =~ $FIELD_REST_RE) {
 
 	  # ~ indicates rather not explicite alias
-	  $alias{$3} = 1 if $2 eq ':';
+	  # Will only be set in case of agregate functions
+	  # TODO: if ($2 eq ':' && index($1,'(') >= 0);
+	  $alias{$3} = $1;
 	  qq{$1 AS `$3`};
 	}
 
 	# Implicite field alias
 	elsif (m/^(?:.+?)\.(?:[^\.]+?)$/) {
-	  $_ . ' AS `' . _clean_alias $_ . '`';
+	  my $cl = _clean_alias $_;
+	  $_ . ' AS `' . $cl . '`';
+	  $alias{$cl} = $_;
 	}
 
 	# Field value
@@ -1595,10 +1637,10 @@ sub _restrictions {
 };
 
 
-# Check for stringification of values
+# Check for stringification of blessed values
 sub _stringify {
   my $ref = blessed $_[0];
-  if ($ref ne ($_ = "$_[0]")) {
+  if (index(($_ = "$_[0]"), $ref) != 0) {
     return $_;
   };
   undef;
@@ -2242,6 +2284,33 @@ L<DBI>,
 L<DBD::SQLite>,
 L<File::Path>,
 L<File::Basename>.
+
+
+=head1 INSTALL
+
+When not installing via package manager or CPAN, you can install
+DBIx::Oro manually, using
+
+  $ perl Makefile.PL
+  $ make
+  $ make test
+  $ sudo make install
+
+By default, C<make test> will test all common and driver specific
+tests for the SQLite driver.
+By using C<make test -e TEST_DB=MySQL> all common and driver specific
+tests for the MySQL driver are run.
+The database information (all information necessary for Oro::new can
+be written as a perl data structure in C<t/test_db.pl>, for example:
+
+  {
+    MySQL => {
+      database => 'test',
+      host     => 'localhost',
+      username => 'MyTestUser',
+      password => 'h3z6z8vvfju'
+    }
+  }
 
 
 =head1 ACKNOWLEDGEMENT

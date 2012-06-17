@@ -1,3 +1,8 @@
+0.23 2012-06-17
+        - Improved MySQL support.
+        - Made testsuite work with different databases.
+        - Added TEST_DB flag for make test.
+
 0.22 2012-06-13
         - Added autocommit method to SQLite driver.
 	- improved Constructor method for SQLite files.
@@ -5,6 +10,7 @@
 	- Improved field syntax.
         - Fixed a small bug regarding in_txn.
 	- Added stringification to objects in pairs.
+	- Fixed Bug in count.
 
 0.21 2012-05-31
         - Moved Sojolicious::Oro to DBIx::Oro.

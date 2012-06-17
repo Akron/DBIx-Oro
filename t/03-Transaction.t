@@ -1,28 +1,52 @@
-use Test::More;
+#!/usr/bin/env perl
 use strict;
 use warnings;
-
-plan tests => 29;
+use Test::More;
+use Data::Dumper;
 
 $|++;
 
-use lib 'lib', '../lib', '../../lib';
+our (@ARGV, %ENV);
+use lib (
+  't',
+  'lib',
+  '../lib',
+  '../../lib',
+  '../../../lib'
+);
+
+use DBTestSuite;
+
+my $suite = DBTestSuite->new($ENV{TEST_DB} || $ARGV[0] || 'SQLite');
+
+# Configuration for this database not found
+unless ($suite) {
+  plan skip_all => 'Database not properly configured';
+  exit(0);
+};
+
+# Start test
+plan tests => 32;
+
 use_ok 'DBIx::Oro';
 
-my $_init_content =
-'CREATE TABLE Content (
-   id         INTEGER PRIMARY KEY,
-   content    TEXT,
-   title      TEXT,
-   author_id  INTEGER
- )';
+# Initialize Oro
+my $oro = DBIx::Oro->new(
+  %{ $suite->param }
+);
 
-ok(my $oro = DBIx::Oro->new(
-  ':memory:' => sub {
-    for ($_[0]) {
-      $_->do($_init_content);
-    };
-  }), 'Init real db');
+ok($oro, 'Handle created');
+
+ok($suite->oro($oro), 'Add to suite');
+
+ok($suite->init(qw/Content/), 'Init');
+
+END {
+  ok($suite->drop, 'Transaction for Dropping') if $suite;
+};
+
+# ---
+
 
 # Insert:
 ok($oro->insert(Content => { title => 'Check!',
@@ -35,8 +59,6 @@ ok($oro->insert(Content =>
 ok($oro->insert(Content =>
 		  { title => 'Check!',
 		    content => 'This is third content.' }), 'Insert');
-
-
 
 
 my ($rv, $sth) = $oro->prep_and_exec('SELECT count("*") as count FROM Content');

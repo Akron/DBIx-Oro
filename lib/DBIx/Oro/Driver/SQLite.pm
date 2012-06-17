@@ -214,13 +214,14 @@ sub insert {
     # Create insert arrays
     my (@keys, @values);
     while (my ($key, $value) = each %param) {
-      next unless $key =~ /^[_0-9a-zA-Z]+$/;
+      next unless $key =~ /^[_\.0-9a-zA-Z]+$/;
       push(@keys,   $key);
       push(@values, $value);
     };
 
     # Create insert string
     my $sql = 'INSERT ';
+
     if ($prop) {
       given ($prop->{-on_conflict}) {
 	when ('replace') { $sql .= 'OR REPLACE '};

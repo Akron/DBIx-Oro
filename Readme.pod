@@ -25,6 +25,7 @@ DBIx::Oro - Simple Database Accessor
   my $person = $oro->table('Person');
   my $peters = $person->select({ name => 'Peter' });
 
+
 =head1 DESCRIPTION
 
 L<DBIx::Oro> is a simple database accessor that provides
@@ -38,15 +39,8 @@ For now it is limited to SQLite. It should be fork- and thread-safe.
 B<DBIx::Oro is in beta status. Do not rely on methods, especially
 on these marked as experimental.>
 
+
 =head1 ATTRIBUTES
-
-=head2 C<dbh>
-
-  my $dbh = $oro->dbh;
-  $oro->dbh(DBI->connect('...'));
-
-The DBI database handle.
-
 
 =head2 C<created>
 
@@ -81,12 +75,26 @@ and indices for SQLite databases.
 
 B<This attribute is EXPERIMENTAL and may change without warnings.>
 
+=head2 C<dbh>
+
+  my $dbh = $oro->dbh;
+  $oro->dbh(DBI->connect('...'));
+
+The DBI database handle.
+
 
 =head2 C<driver>
 
   print $oro->driver;
 
 The driver (e.g., 'SQLite') of the Oro instance.
+
+
+=head2 C<last_insert_id>
+
+  my $id = $oro->last_insert_id;
+
+Returns the globally last inserted id regarding to the database connection.
 
 
 =head2 C<last_sql>
@@ -105,13 +113,6 @@ valid due to reformating.
 B<The array return is EXPERIMENTAL and may change without warnings.>
 
 
-=head2 C<last_insert_id>
-
-  my $id = $oro->last_insert_id;
-
-Returns the globally last inserted id regarding to the database connection.
-
-
 =head1 METHODS
 
 
@@ -125,7 +126,7 @@ Returns the globally last inserted id regarding to the database connection.
           name  TEXT NOT NULL,
           age   INTEGER
       )');
-  })
+  });
 
 Creates a new Oro database handle.
 If only a string value is given, this will default to
@@ -275,7 +276,7 @@ special restriction parameters:
       -group    => [age => { age => { gt => 42 } }]
       -offset   => 1,
       -limit    => 5,
-      -distinct => 1,
+      -distinct => 1
     }
   );
 
@@ -432,6 +433,17 @@ Fields can be column names or functions. With a colon you can define
 aliases for the field names.
 
 
+=head2 C<count>
+
+  my $persons = $oro->count('Person');
+  my $pauls   = $oro->count('Person' => { name => 'Paul' });
+
+Returns the number of rows of a table.
+Expects the table name and a hash ref with conditions,
+the rows have to fulfill.
+Caching can be applied as with L<select>.
+
+
 =head2 C<delete>
 
   my $rows = $oro->delete(Person => { id => 4 });
@@ -443,17 +455,6 @@ In case of scalar values, identity is tested for the condition.
 In case of array refs, it is tested, if the field is an element of the set.
 Restrictions can be applied as with L<select>.
 Returns the number of rows that were deleted.
-
-
-=head2 C<count>
-
-  my $persons = $oro->count('Person');
-  my $pauls   = $oro->count('Person' => { name => 'Paul' });
-
-Returns the number of rows of a table.
-Expects the table name and a hash ref with conditions,
-the rows have to fulfill.
-Caching can be applied as with L<select>.
 
 
 =head2 C<table>
@@ -486,43 +487,6 @@ C<table> in conjunction with a joined table can be seen as an "ad hoc view".
 B<This method is EXPERIMENTAL and may change without warnings.>
 
 
-=head2 C<prep_and_exec>
-
-  my ($rv, $sth) = $oro->prep_and_exec(
-    'SELECT ? FROM Person', ['name'], 'cached'
-  );
-
-  if ($rv) {
-    my $row;
-    while ($row = $sth->fetchrow_hashref) {
-      print $row->{name};
-      if ($name eq 'Fry') {
-        $sth->finish;
-        last;
-      };
-    };
-  };
-
-Prepare and execute an SQL statement with all checkings.
-Returns the return value (on error C<false>, otherwise C<true>,
-e.g. the number of modified rows) and - in an array context -
-the statement handle.
-Accepts the SQL statement, parameters for binding in an array
-reference and optionally a boolean value, if the prepared
-statement should be cached by L<DBI>.
-
-
-=head2 C<explain>
-
-  print $oro->explain(
-    'SELECT ? FROM Person', ['name']
-  );
-
-Returns the query plan for a given query as a line-breaked string.
-
-B<This method is EXPERIMENTAL and may change without warnings.>
-
-
 =head2 C<txn>
 
   $oro->txn(
@@ -547,6 +511,25 @@ Transactions established with this method can be securely nested
 on the driver).
 
 
+=head2 C<import_sql>
+
+  my $oro = DBIx::Oro->new(
+    driver => 'SQLite',
+    file   => ':memory:,
+    import => ['myschema.sql', 'mydata.sql']
+  );
+
+  $oro->import_sql('mydb.sql');
+  $oro->import_sql(qw/myschema.sql mydata.sql/);
+  $oro->import_sql(['myschema.sql', 'mydata.sql']);
+
+Loads a single or multiple SQL documents (utf-8) and applies
+all statements sequentially. Each statement has to be delimited
+using one comment line starting with C<-- ->.
+
+B<This method is EXPERIMENTAL and may change without warnings.>
+
+
 =head2 C<do>
 
   $oro->do(
@@ -557,6 +540,43 @@ on the driver).
 
 Executes SQL code.
 This is a wrapper for the DBI C<do()> method (but fork- and thread-safe).
+
+
+=head2 C<explain>
+
+  print $oro->explain(
+    'SELECT ? FROM Person', ['name']
+  );
+
+Returns the query plan for a given query as a line-breaked string.
+
+B<This method is EXPERIMENTAL and may change without warnings.>
+
+
+=head2 C<prep_and_exec>
+
+  my ($rv, $sth) = $oro->prep_and_exec(
+    'SELECT ? FROM Person', ['name'], 'cached'
+  );
+
+  if ($rv) {
+    my $row;
+    while ($row = $sth->fetchrow_hashref) {
+      print $row->{name};
+      if ($name eq 'Fry') {
+        $sth->finish;
+        last;
+      };
+    };
+  };
+
+Prepare and execute an SQL statement with all checkings.
+Returns the return value (on error C<false>, otherwise C<true>,
+e.g. the number of modified rows) and - in an array context -
+the statement handle.
+Accepts the SQL statement, parameters for binding in an array
+reference and optionally a boolean value, if the prepared
+statement should be cached by L<DBI>.
 
 
 =head1 EVENTS
@@ -594,6 +614,33 @@ L<DBI>,
 L<DBD::SQLite>,
 L<File::Path>,
 L<File::Basename>.
+
+
+=head1 INSTALL
+
+When not installing via package manager or CPAN, you can install
+DBIx::Oro manually, using
+
+  $ perl Makefile.PL
+  $ make
+  $ make test
+  $ sudo make install
+
+By default, C<make test> will test all common and driver specific
+tests for the SQLite driver.
+By using C<make test -e TEST_DB=MySQL> all common and driver specific
+tests for the MySQL driver are run.
+The database information (all information necessary for Oro::new can
+be written as a perl data structure in C<t/test_db.pl>, for example:
+
+  {
+    MySQL => {
+      database => 'test',
+      host     => 'localhost',
+      username => 'MyTestUser',
+      password => 'h3z6z8vvfju'
+    }
+  }
 
 
 =head1 ACKNOWLEDGEMENT

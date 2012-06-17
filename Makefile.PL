@@ -17,9 +17,10 @@ WriteMakefile(
 	'strict'       => 0,
 	'warnings'     => 0,
 	'utf8'         => 0,
-	'bytes'        => 0
+	'bytes'        => 0,
+	'Math::BigInt' => 0
     },
     test => {
-      TESTS => 't/*.t t/*/*.t t/*/*/*.t t/*/*/*/*.t'
+      TESTS => 't/*.t'
     }
 );

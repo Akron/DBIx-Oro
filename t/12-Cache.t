@@ -1,51 +1,56 @@
-use Test::More;
-use File::Temp qw/:POSIX/;
-use Data::Dumper 'Dumper';
+#!/usr/bin/env perl
 use strict;
 use warnings;
+use Test::More;
+use Data::Dumper;
+use utf8;
 
+$|++;
+
+our (@ARGV, %ENV);
+use lib (
+  't',
+  'lib',
+  '../lib',
+  '../../lib',
+  '../../../lib'
+);
+
+use DBTestSuite;
+
+my $suite = DBTestSuite->new($ENV{TEST_DB} || $ARGV[0] || 'SQLite');
+
+# Configuration for this database not found
+unless ($suite) {
+  plan skip_all => 'Database not properly configured';
+  exit(0);
+};
+
+# Start test
 if ( eval 'use CHI; 1;') {
-  plan tests => 55;
+  plan tests => 58;
 } else {
   plan skip_all => "Not fully implemented yet.";
 };
 
-use lib 'lib', '../lib', '../../lib';
 use_ok 'DBIx::Oro';
 
-my $_init_name =
-'CREATE TABLE Name (
-   id       INTEGER PRIMARY KEY,
-   prename  TEXT NOT NULL,
-   surname  TEXT
- )';
+# Initialize Oro
+my $oro = DBIx::Oro->new(
+  %{ $suite->param }
+);
 
-my $_init_content =
-'CREATE TABLE Content (
-   id         INTEGER PRIMARY KEY,
-   content    TEXT,
-   title      TEXT,
-   author_id  INTEGER
- )';
+ok($oro, 'Handle created');
 
-my $_init_book =
-'CREATE TABLE Book (
-   id         INTEGER PRIMARY KEY,
-   title      TEXT,
-   year       INTEGER,
-   author_id  INTEGER,
-   FOREIGN KEY (author_id) REFERENCES Name(id)
-)';
+ok($suite->oro($oro), 'Add to suite');
 
+ok($suite->init(qw/Name Content Book/), 'Init');
 
-ok(my $oro = DBIx::Oro->new(
-  ':memory:' => sub {
-    for ($_[0]) {
-      $_->do($_init_name);
-      $_->do($_init_content);
-      $_->do($_init_book);
-    };
-  }), 'Init real db');
+END {
+  ok($suite->drop, 'Transaction for Dropping') if $suite;
+};
+
+# ---
 
 
 my $hash = {};
@@ -62,7 +67,7 @@ ok($oro->insert(Name =>
 
 
 my $result = $oro->select(Name => {
-  prename => { glob => '*e*' }
+  prename => { like => '%e%' }
 });
 is(@$result, 3, 'Select with like');
 my ($last_sql, $last_sql_cache) = $oro->last_sql;
@@ -70,7 +75,7 @@ ok(!$last_sql_cache, 'Not from Cache');
 ok(!(scalar $chi->get_keys), 'No keys');
 
 $result = $oro->select(Name => {
-  prename => { glob => '*e*' },
+  prename => { like => '%e%' },
   -cache => {
     chi => $chi,
     key => 'Contains e'
@@ -201,39 +206,59 @@ ok($last_sql_cache, 'From Cache 6');
 
 is(scalar $chi->get_keys, 3, 'Three keys');
 
+my $load = $oro->load(Name => { prename => 'Sabine' });
+delete $load->{id};
 is_deeply(
-  $oro->load(Name => { prename => 'Sabine' }),
-  {id => 4, prename => 'Sabine', surname => 'Meier'},
+  $load,
+  {
+    prename => 'Sabine',
+    surname => 'Meier',
+    age => undef
+  },
   'Load');
 
 is(scalar $chi->get_keys, 3, 'Three keys');
 ($last_sql, $last_sql_cache) = $oro->last_sql;
 ok(!$last_sql_cache, 'Not from Cache 7');
 
+$load = $oro->load(Name => {
+  prename => 'Sabine',
+  -cache => {
+    chi => $chi,
+    key => 'load'
+  }
+});
+delete $load->{id};
+
 is_deeply(
-  $oro->load(Name => {
+  $load,
+  {
     prename => 'Sabine',
-    -cache => {
-      chi => $chi,
-      key => 'load'
-    }
-  }),
-  {id => 4, prename => 'Sabine', surname => 'Meier'},
+    surname => 'Meier',
+    age => undef
+  },
   'Load');
 
 ($last_sql, $last_sql_cache) = $oro->last_sql;
 ok(!$last_sql_cache, 'Not from Cache 8');
 is(scalar $chi->get_keys, 4, 'Four keys');
 
+$load = $oro->load(Name => {
+  prename => 'Sabine',
+  -cache => {
+    chi => $chi,
+    key => 'load'
+  }
+});
+delete $load->{id};
+
 is_deeply(
-  $oro->load(Name => {
+  $load,
+  {
     prename => 'Sabine',
-    -cache => {
-      chi => $chi,
-      key => 'load'
-    }
-  }),
-  {id => 4, prename => 'Sabine', surname => 'Meier'},
+    surname => 'Meier',
+    age => undef
+  },
   'Load');
 
 ($last_sql, $last_sql_cache) = $oro->last_sql;

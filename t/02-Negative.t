@@ -1,135 +1,50 @@
-use Test::More;
-use File::Temp qw/:POSIX/;
-use Data::Dumper 'Dumper';
+#!/usr/bin/env perl
 use strict;
 use warnings;
-
-plan tests => 86;
-
+use Test::More;
+use Data::Dumper;
+use File::Temp qw/:POSIX/;
 
 $|++;
 
-sub no_warn (&) {
-  local $SIG{__WARN__} = sub {};
-  $_[0]->();
+our (@ARGV, %ENV);
+use lib (
+  't',
+  'lib',
+  '../lib',
+  '../../lib',
+  '../../../lib'
+);
+
+use DBTestSuite;
+
+my $suite = DBTestSuite->new($ENV{TEST_DB} || $ARGV[0] || 'SQLite');
+
+# Configuration for this database not found
+unless ($suite) {
+  plan skip_all => 'Database not properly configured';
+  exit(0);
 };
 
+# Start test
+plan tests => 63;
 
-use lib 'lib', '../lib', '../../lib';
 use_ok 'DBIx::Oro';
 
-my $_init_name =
-'CREATE TABLE Name (
-   id       INTEGER PRIMARY KEY,
-   prename  TEXT NOT NULL,
-   surname  TEXT
- )';
+# Initialize Oro
+my $oro = DBIx::Oro->new(
+  %{ $suite->param }
+);
 
-my $_init_content =
-'CREATE TABLE Content (
-   id         INTEGER PRIMARY KEY,
-   content    TEXT,
-   title      TEXT,
-   author_id  INTEGER
- )';
+ok($oro, 'Handle created');
 
-my $_init_book =
-'CREATE TABLE Book (
-   id         INTEGER PRIMARY KEY,
-   title      TEXT,
-   year       INTEGER,
-   author_id  INTEGER,
-   FOREIGN KEY (author_id) REFERENCES Name(id)
-)';
+ok($suite->oro($oro), 'Add to suite');
 
-# Real DB:
-my $db_file = tmpnam();
+ok($suite->init(qw/Name Content/), 'Init');
 
-ok(my $oro = DBIx::Oro->new(
-  $db_file => sub {
-    for ($_[0]) {
-      $_->do($_init_name);
-      $_->do($_init_content);
-      $_->do($_init_book);
-    };
-  }), 'Init real db');
-
-ok($oro->insert(Content => {
-  title => 'Test',
-  content => 'Value 1'
-}), 'Before disconnect');
-
-ok($oro->dbh->disconnect, 'Disonnect');
-
-# Driver test
-is($oro->driver, 'SQLite', 'Driver');
-
-ok($oro->insert(Content => {
-  title => 'Test', content => 'Value 2'
-}), 'Reconnect');
-
-ok($oro->on_connect(
-  sub {
-    ok(1, 'on_connect release 1')}
-), 'on_connect');
-
-ok($oro->on_connect(
-  testvalue => sub {
-    ok(1, 'on_connect release 2')}
-), 'on_connect');
-
-ok(!$oro->on_connect(
-  testvalue => sub {
-    ok(0, 'on_connect release 3')}
-), 'on_connect');
-
-ok($oro->dbh->disconnect, 'Disconnect');
-
-ok($oro->insert(Content => {
-  title => 'Test', content => 'Value 3'
-}), 'Reconnect');
-
-$db_file = '';
-
-ok($oro = DBIx::Oro->new( $db_file ), 'Init temp db');
-
-my ($last_sql, $last_sql_cache) = $oro->last_sql;
-ok(!$last_sql, 'No last SQL');
-ok(!$last_sql_cache, 'No Cache');
-
-$oro->txn(
-  sub {
-    for ($_[0]) {
-      $_->do($_init_name);
-      $_->do($_init_content);
-      $_->do($_init_book);
-    }
-  });
-
-
-ok($oro->insert(Content => {
-  title => 'Test', content => 'Value 1'
-}), 'Before disconnect');
-
-ok($oro->dbh->disconnect, 'Disonnect');
-
-no_warn {
-  ok(!$oro->insert(Content => {
-    title => 'Test', content => 'Value 2'
-  }), 'Reconnect');
+END {
+  ok($suite->drop, 'Transaction for Dropping') if $suite;
 };
-
-# In memory db
-$db_file = ':memory:';
-
-ok($oro = DBIx::Oro->new(
-  $db_file => sub {
-    for ($_[0]) {
-      $_->do($_init_name);
-      $_->do($_init_content);
-      $_->do($_init_book);
-    };
-  }), 'Init memory db');
 
 no_warn {
 
@@ -141,8 +56,6 @@ no_warn {
 			    surname => 'Sojolicious'}), 'Insert');
 
   ok(!$oro->insert(Content_unknown => {title => 'Hey!'}), 'Insert');
-
-  ok(!$oro->insert(Name => { surname => 'Rodriguez'}), 'Insert');
 
   ok(!$oro->update(Content_unknown =>
 		     { content => 'This is changed content.' } =>
@@ -176,19 +89,10 @@ is($oro->load(Name => { surname => 'xyz777' })->{prename},
    '0045',
    'Prepended Zeros');
 
-$oro = DBIx::Oro->new(
-  $db_file => sub {
-    shift->do($_init_name);
-  });
+# Delete all.
 
-ok($oro, 'Created');
-ok($oro->created, 'Created');
-
-if ($oro->created) {
-  $oro->do($_init_content);
-  $oro->do($_init_book);
-  $oro->do('CREATE INDEX i ON Book(author_id)');
-};
+ok($suite->drop, 'Drop tables');
+ok($suite->init(qw/Content Name/), 'Init tables');
 
 
 # Insert:
@@ -198,15 +102,16 @@ ok($oro->insert(Content => { title => 'Check!',
 ok($oro->insert(Name => { prename => 'Akron',
 			  surname => 'Sojolicious'}), 'Insert');
 
+is($oro->last_insert_id, 1, 'Row id');
+
+
 # Update:
 ok($oro->update(Content =>
 		  { content => 'This is changed content.' } =>
 		    { title => 'Check!' }), 'Update');
 
-is($oro->last_insert_id, 1, 'Row id');
-
 like($oro->last_sql, qr/^update/i, 'SQL command');
-($last_sql, $last_sql_cache) = $oro->last_sql;
+my ($last_sql, $last_sql_cache) = $oro->last_sql;
 ok(!$last_sql_cache, 'No Cache');
 
 ok(!$oro->update(Content =>
@@ -259,12 +164,13 @@ $oro->select('Name' => ['prename'] =>
 		 ok($_[0]->{prename}, 'Fields');
 	     });
 
-
-
 ok($oro->insert(Name => { prename => 'Ulli' }), 'Insert Ulli');
 
 is($oro->count('Name' => { surname => 'Sojolicious' } ), 1, 'Count');
+
 is($oro->count('Name' => { surname => undef } ), 1, 'Count');
+
+
 
 ok($oro->update( Content =>
 		   { content => 'Das ist der vierte content.' } =>
@@ -298,8 +204,6 @@ ok(!$oro->select('Content' =>
 ok($oro->delete('Content' => { content => ['Das ist der siebte content.']}),
    'Delete');
 
-is($oro->last_insert_id, 5, 'Row id');
-
 ok($oro->insert(Content => [qw/title content/] =>
 	   ['CheckBulk','Das ist der sechste content'],
 	   ['CheckBulk','Das ist der siebte content'],
@@ -330,54 +234,5 @@ ok(!$oro->count(
     }), 'Ignore fields in Count');
 
 
-# Reformatting SQL
-$oro->select(Name => {
-  prename => [
-    qw/Sabine Margot Peter Heinrich Wilhelm Kevin Schorsch/
-  ],
-  surname => [
-    qw/Meier Michels Petermann Kocholski/
-  ]});
 
-like($oro->last_sql, qr/4 x \?/, 'Reformatted last_sql');
-like($oro->last_sql, qr/7 x \?/, 'Reformatted last_sql');
-
-$oro->insert(
-  Name =>
-    [qw/prename surname/] => (
-      [qw/John Major/],
-      [qw/Katharina Valente/],
-      [qw/Sergei Prokofjew/],
-      [qw/David Suchet/]
-    ));
-
-like($oro->last_sql, qr/WITH 4 x UNION SELECT/, 'Reformatted last_sql');
-
-ok($oro->do(
-  'CREATE TABLE KeyCollection (
-     id   INTEGER PRIMARY KEY,
-     key1 INTEGER,
-     key2 INTEGER,
-     key3 INTEGER,
-     key4 INTEGER,
-     key5 INTEGER,
-     key6 INTEGER
-  )'), 'Create Table');
-
-ok($oro->insert(
-  KeyCollection =>
-    [map {'key' . $_} (1..6) ] =>
-      [map {'a_' . $_} (1..6) ],
-      [map {'b_' . $_} (1..6) ],
-      [map {'c_' . $_} (1..6) ],
-      [map {'d_' . $_} (1..6) ],
-      [map {'e_' . $_} (1..6) ],
-      [map {'f_' . $_} (1..6) ],
-      [map {'g_' . $_} (1..6) ],
-      [map {'h_' . $_} (1..6) ],
-  ), 'Bulk Insert');
-
-like($oro->last_sql, qr/WITH 8 x UNION SELECT 6 x \?/, 'Reformatted last_sql');
-
-
-1;
+__END__

@@ -1,38 +1,52 @@
-use Test::More;
+#!/usr/bin/env perl
 use strict;
 use warnings;
+use Test::More;
+use Data::Dumper;
 use utf8;
-
-plan tests => 52;
 
 $|++;
 
-use lib 'lib', '../lib', '../../lib';
+our (@ARGV, %ENV);
+use lib (
+  't',
+  'lib',
+  '../lib',
+  '../../lib',
+  '../../../lib'
+);
+
+use DBTestSuite;
+
+my $suite = DBTestSuite->new($ENV{TEST_DB} || $ARGV[0] || 'SQLite');
+
+# Configuration for this database not found
+unless ($suite) {
+  plan skip_all => 'Database not properly configured';
+  exit(0);
+};
+
+# Start test
+plan tests => 49;
+
 use_ok 'DBIx::Oro';
 
+# Initialize Oro
+my $oro = DBIx::Oro->new(
+  %{ $suite->param }
+);
 
-my $_init_name =
-'CREATE TABLE Name (
-   id       INTEGER PRIMARY KEY,
-   prename  TEXT NOT NULL,
-   surname  TEXT
- )';
+ok($oro, 'Handle created');
 
-my $_init_content =
-'CREATE TABLE Content (
-   id         INTEGER PRIMARY KEY,
-   content    TEXT,
-   title      TEXT,
-   author_id  INTEGER
- )';
+ok($suite->oro($oro), 'Add to suite');
 
-ok(my $oro = DBIx::Oro->new(
-  ':memory:' => sub {
-    for ($_[0]) {
-      $_->do($_init_name);
-      $_->do($_init_content);
-    };
-  }), 'Init memory db');
+ok($suite->init(qw/Name Content/), 'Init');
+
+END {
+  ok($suite->drop, 'Transaction for Dropping') if $suite;
+};
+
+# ---
 
 my @array;
 push(@array, ['ContentBulk', $_, $_]) foreach 1..1111;
@@ -138,26 +152,13 @@ ok($oro->insert(Name =>
 $result = $oro->select(Name => { prename => { like => '%e%' } });
 is(@$result, 3, 'Select with like');
 
-# Glob
-$result = $oro->select(Name => { prename => { glob => '*e*' } });
-is(@$result, 3, 'Select with glob');
-
 # Negation like
 $result = $oro->select(Name => { prename => { not_like => '%e%' } });
 is(@$result, 1, 'Select with not_like');
 
-# Negation Glob
-$result = $oro->select(Name => { prename => { not_glob => '*e*' } });
-is(@$result, 1, 'Select with not_glob');
 
 # Negation Between
 $result = $oro->select(Content => { author_id => { not_between => [2, 1110] } });
 is($result->[0]->{content}, '1', 'Select with not_between');
 is($result->[1]->{content}, '1111', 'Select with not_between');
 is(@$result, 2, 'Select with not_between');
-
-my $surnames = $oro->select('Name');
-ok($oro->insert(Name => { prename => 'Daniel' }), 'Insert');
-is($oro->load(Name => { surname => undef })->{prename}, 'Daniel', 'Load with undef');
-is_deeply($oro->select(Name => { surname => { not => undef } }), $surnames, 'Select with not null');
-ok($oro->delete(Name => { prename => 'Daniel'}), 'Delete');
