@@ -42,17 +42,22 @@ sub new {
   }
 
   # Create path for file - based on ORLite
-  elsif (!-f $file) {
-    $self->{created} = 1;
+  elsif (!-e $file) {
 
     my $dir = File::Basename::dirname($file);
     unless (-d $dir) {
       File::Path::mkpath( $dir, { verbose => 0 } );
     };
+
+    # Touch the file
+    if (open(TOUCH,'>' . $file)) {
+      $self->{created} = 1;
+      close(TOUCH);
+    };
   };
 
   # Data source name
-  $self->{dsn} = 'dbi:SQLite:dbname=' . $self->file;
+  $self->{dsn} = 'dbi:SQLite:dbname=' . $self->{file};
 
   # Attach hash
   $self->{attached} = {};

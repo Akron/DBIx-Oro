@@ -845,11 +845,12 @@ sub do {
 
   # Database connection
   my $dbh = shift->dbh;
-  my (@rv) = $dbh->do( @_ );
+
+  my $rv = $dbh->do( @_ );
 
   # Error
-  carp $dbh->errstr . ' in "' . $_[0] . '"' if $dbh->err;
-  return @rv;
+  carp $dbh->errstr . ' in "' . $_[0] . '"' if !$rv && $dbh->err;
+  return $rv;
 };
 
 
