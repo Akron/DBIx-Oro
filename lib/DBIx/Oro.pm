@@ -2,7 +2,7 @@ package DBIx::Oro;
 use strict;
 use warnings;
 
-our $VERSION = '0.23';
+our $VERSION = '0.24';
 
 # See the bottom of this file for the POD documentation.
 
@@ -879,7 +879,7 @@ sub txn {
 
     # start
     my $rv = $_[0]->($self);
-    if (!$rv || $rv != -1) {
+    if (!$rv || $rv ne '-1') {
       ${$self->{in_txn}} = 0;
       $dbh->commit;
       return 1;
@@ -927,7 +927,7 @@ sub txn {
     };
 
     # Commit savepoint
-    if (!$rv || $rv != -1) {
+    if (!$rv || $rv ne '-1') {
       $self->do("RELEASE SAVEPOINT $sp");
       return 1;
     };
@@ -1702,10 +1702,10 @@ in a web environment.
 
 Its aim is not to be a complete abstract replacement
 for SQL communication with DBI, but to make common tasks easier.
-For now it is limited to SQLite. It should be fork- and thread-safe.
+For now it is mostly limited to SQLite. It should be fork- and thread-safe.
 
-B<DBIx::Oro is in beta status. Do not rely on methods, especially
-on these marked as experimental.>
+B<DBIx::Oro is in alpha status. Do not rely on methods, especially
+on those marked as experimental.>
 
 
 =head1 ATTRIBUTES
@@ -1802,6 +1802,7 @@ a L<DBIx::Oro::Driver::SQLite> object. The database will
 be connected based on the given filename or in memory,
 if the filename is ':memory:'.
 If the database file does not already exist, it is created.
+
 Accepts an optional callback that is only released, if
 the database is newly created. The first parameter of
 the callback function is the Oro-object.
@@ -1905,6 +1906,8 @@ test with (see below).
 Fields can be column names or functions.
 With a colon you can define aliases for the field names.
 
+B<The callback is EXPERIMENTAL and may change without warnings.>
+
 =head3 Operators
 
 When checking with hash refs, several operators are supported.
@@ -2002,6 +2005,7 @@ containing numerical markers for the join.
 If the field array ref does not exists, all columns of the
 table are selected. If the array ref is empty, no columns of the
 table are selected.
+
 With a colon you can define aliases for the field names.
 The join marker hash ref has field names as keys
 and numerical markers or array refs of numerical markers as values.
@@ -2061,7 +2065,7 @@ B<Treatments are EXPERIMENTAL and may change without warnings.>
   my $users = $oro->select(
     Person => {
       -cache => {
-        chi        => CHI->new(),
+        chi        => $cache,
         key        => 'all_persons',
         expires_in => '10 min'
       }
@@ -2242,6 +2246,7 @@ Prepare and execute an SQL statement with all checkings.
 Returns the return value (on error C<false>, otherwise C<true>,
 e.g. the number of modified rows) and - in an array context -
 the statement handle.
+
 Accepts the SQL statement, parameters for binding in an array
 reference and optionally a boolean value, if the prepared
 statement should be cached by L<DBI>.
