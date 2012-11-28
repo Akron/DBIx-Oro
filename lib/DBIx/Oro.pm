@@ -6,6 +6,8 @@ our $VERSION = '0.24';
 
 # See the bottom of this file for the POD documentation.
 
+# Todo: -prefix is not documented!
+
 use v5.10.1;
 
 use Scalar::Util qw/blessed/;
@@ -25,6 +27,8 @@ our $OP_REGEX = qr/^(?i:
 		   )$/x;
 
 our $KEY_REGEX = qr/[_\.0-9a-zA-Z]+/;
+
+our $KEY_REGEX_NOPREF = qr/[_0-9a-zA-Z]+/;
 
 our $SFIELD_REGEX =
   qr/(?:$KEY_REGEX|(?:$KEY_REGEX\.)?\*|"[^"]*"|'[^']*')/;
@@ -1243,7 +1247,8 @@ sub _join_tables {
 	# Has a hash next to it
 	if (ref $join[0] && ref $join[0] eq 'HASH') {
 
-	  # Set Prefix if given.
+	  # Set Prefix if given
+	  # Todo: Is this documented?
 	  if (exists $join[0]->{-prefix}) {
 	    $f_prefix = delete $join[0]->{-prefix};
 	    $f_prefix = _clean_alias($prefix) . '_' if $f_prefix eq '*';
@@ -1264,12 +1269,12 @@ sub _join_tables {
 
 	      # Field is not a function
 	      if (index($_, '(') == -1) {
-		$_ = "$prefix.$_";
+		$_ = "$prefix.$_" if index($_, '.') == -1;
 	      }
 
 	      # Field is a function
 	      else {
-		s/((?:\(|$FIELD_OP_REGEX)\s*)($KEY_REGEX)
+		s/((?:\(|$FIELD_OP_REGEX)\s*)($KEY_REGEX_NOPREF)
                   (\s*(?:$FIELD_OP_REGEX|\)))/$1$prefix\.$2$3/ogx;
 	      };
 
@@ -1307,7 +1312,7 @@ sub _join_tables {
 
 	  # TODO: Does this work?
 	  unless ($alias{$key}) {
-	    $key = "$prefix.$key";
+	    $key = "$prefix.$key" if $key =~ $KEY_REGEX_NOPREF;
 	  }
 	  else {
 	    $key = $alias{$key};

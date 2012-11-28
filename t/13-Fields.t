@@ -27,7 +27,7 @@ unless ($suite) {
 };
 
 # Start test
-plan tests => 12;
+plan tests => 14;
 
 use_ok 'DBIx::Oro';
 
@@ -40,7 +40,7 @@ ok($oro, 'Handle created');
 
 ok($suite->oro($oro), 'Add to suite');
 
-ok($suite->init(qw/Name Product/), 'Init');
+ok($suite->init(qw/Name Product Book/), 'Init');
 
 END {
   ok($suite->drop, 'Transaction for Dropping') if $suite;
@@ -85,6 +85,16 @@ my $book = $oro->load(
 
 ok($book, 'Book loaded');
 is($book->{tax_total}, 2.99, 'Tax total');
+
+
+# Test with Prefixes
+ok($oro->select([
+  Name => ['prename:author'] => { id => 1 },
+  Book => ['title','year', 'Name.id'] => { author_id => 1 }
+] => { author => 'Fry' } ), 'Prefix 1');
+
+unlike($oro->last_sql, qr{Book\.Name\.id}, 'Prefix 2');
+
 
 
 # Todo: Test for 'NOT'

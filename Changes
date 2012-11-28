@@ -1,5 +1,6 @@
 0.24 2012-11-28
         - Bugfix for transaction callbacks.
+	- Bugfix for automatic prefixing.
 
 0.23 2012-06-28
         - Improved MySQL support.
