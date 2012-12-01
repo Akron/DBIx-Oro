@@ -55,7 +55,9 @@ sub _connect {
 # Database driver
 sub driver { 'MySQL' };
 
+
 1;
+
 
 __END__
 

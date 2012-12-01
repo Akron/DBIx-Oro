@@ -27,6 +27,7 @@ my @default = ('<b>', '</b>', '<b>...</b>', -1, -15);
 sub new {
   my $class = shift;
   my %param = @_;
+  $param{created} //= 0;
 
   my $autocommit = delete $param{autocommit};
 
@@ -71,6 +72,52 @@ sub new {
 
   # Return object
   $self;
+};
+
+
+# Initialize database if newly created
+sub _init {
+  my $self = shift;
+
+  # Get callback
+  my $cb = delete $self->{init} if $self->{init} &&
+    (ref $self->{init} || '') eq 'CODE';
+
+  # Import SQL file
+  my $import    = delete $self->{import};
+  my $import_cb = delete $self->{import_cb};
+
+  # Initialize database if newly created
+  if ($self->created && ($import || $cb)) {
+
+    # Start creation transaction
+    unless (
+      $self->txn(
+	sub {
+
+	  # Import SQL file
+	  if ($import) {
+	    $self->import_sql($import, $import_cb) or return -1;
+	  };
+
+	  # Release callback
+	  return $cb->($self) if $cb;
+	  return 1;
+	})
+    ) {
+
+      # Unlink SQLite database
+      if (index($self->file, ':') != 0) {
+	unlink $self->file;
+      };
+
+      # Not successful
+      $self = undef;
+      return;
+    };
+  };
+
+  return 1;
 };
 
 
@@ -708,6 +755,13 @@ DBIx::Oro::Driver::SQLite - SQLite driver for DBIx::Oro
 
   if ($oro->created) {
     $oro->do(
+    'CREATE TABLE Person (
+        id    INTEGER PRIMARY KEY,
+        name  TEXT NOT NULL,
+        age   INTEGER
+     )');
+
+    $oro->do(
       'CREATE VIRTUAL TABLE Blog USING fts4(title, body)'
     );
   };
@@ -743,6 +797,40 @@ driver for L<DBIx::Oro> that provides further functionalities.
 L<DBIx::Oro::Driver::SQLite> inherits all attributes from
 L<DBIx::Oro> and implements the following new ones
 (with possibly overwriting inherited attributes).
+
+
+=head2 C<created>
+
+  if ($oro->created) {
+    print "This is brand new!";
+  };
+
+If the database was created on construction of the handle,
+this attribute is true. Otherwise it's false.
+In most cases, this is useful to create tables, triggers
+and indices for SQLite databases.
+
+  if ($oro->created) {
+    $oro->txn(
+      sub {
+
+        # Create table
+        $oro->do(
+          'CREATE TABLE Person (
+              id    INTEGER PRIMARY KEY,
+              name  TEXT NOT NULL,
+              age   INTEGER
+          )'
+        ) or return -1;
+
+        # Create index
+        $oro->do(
+          'CREATE INDEX age_i ON Person (age)'
+        ) or return -1;
+    });
+  };
+
+B<This attribute is EXPERIMENTAL and may change without warnings.>
 
 
 =head2 C<file>

@@ -2,11 +2,12 @@ package DBIx::Oro;
 use strict;
 use warnings;
 
-our $VERSION = '0.24';
+our $VERSION = '0.25';
 
 # See the bottom of this file for the POD documentation.
 
 # Todo: -prefix is not documented!
+# Todo. Put 'Created' in SQLite driver
 
 use v5.10.1;
 
@@ -74,11 +75,6 @@ sub new {
   # Init by default
   ${$param{in_txn}} = 0;
   $param{last_sql} = '';
-  $param{created} //= 0;
-
-  # Get callback
-  my $cb = delete $param{init} if $param{init} &&
-    (ref $param{init} || '') eq 'CODE';
 
   my $pwd = delete $param{password};
 
@@ -94,10 +90,6 @@ sub new {
 
   # On_connect event
   my $on_connect = delete $param{on_connect};
-
-  # Import SQL file
-  my $import    = delete $param{import};
-  my $import_cb = delete $param{import_cb};
 
   # Get driver specific handle
   $self = $package->new( %param );
@@ -129,39 +121,11 @@ sub new {
   # First element is a counter
   $self->{savepoint} = [1];
 
-  # Initialize database if newly created
-  if ($self->created && ($import || $cb)) {
+  # Initialize database and return Oro instance
+  return $self if $self->_init;
 
-    # Start creation transaction
-    unless (
-      $self->txn(
-	sub {
-
-	  # Import SQL file
-	  if ($import) {
-	    $self->import_sql($import, $import_cb) or return -1;
-	  };
-
-	  # Release callback
-	  return $cb->($self) if $cb;
-	  return 1;
-	})
-    ) {
-
-      # SQLite database
-      if ($self->driver eq 'SQLite' &&
-	    index($self->file, ':') != 0) {
-	unlink $self->file;
-      };
-
-      # Not successful
-      $self = undef;
-      return;
-    };
-  };
-
-  # Return Oro instance
-  $self;
+  # Fail
+  return;
 };
 
 
@@ -275,12 +239,6 @@ sub last_sql {
 
 # Database driver
 sub driver { '' };
-
-
-# Database was just created
-sub created {
-  $_[0]->{created};
-};
 
 
 # Insert values to database
@@ -1067,6 +1025,10 @@ sub DESTROY {
 };
 
 
+# Initialize database
+sub _init { 1 };
+
+
 # Connect with database
 sub _connect {
   my $self = shift;
@@ -1683,15 +1645,6 @@ DBIx::Oro - Simple Database Accessor
   use DBIx::Oro;
 
   my $oro = DBIx::Oro->new('file.sqlite');
-  if ($oro->created) {
-    $oro->do(
-    'CREATE TABLE Person (
-        id    INTEGER PRIMARY KEY,
-        name  TEXT NOT NULL,
-        age   INTEGER
-     )'
-    );
-  };
   $oro->insert(Person => { name => 'Peter'});
   my $john = $oro->load(Person => { id => 4 });
 
@@ -1707,46 +1660,16 @@ in a web environment.
 
 Its aim is not to be a complete abstract replacement
 for SQL communication with DBI, but to make common tasks easier.
-For now it is mostly limited to SQLite. It should be fork- and thread-safe.
+For now it's focused on SQLite. It should be fork- and thread-safe.
+
+See L<DBIx::Oro::Driver::SQLite> and L<DBIx::Oro::Driver::MySQL>
+for database specific drivers.
 
 B<DBIx::Oro is in alpha status. Do not rely on methods, especially
 on those marked as experimental.>
 
 
 =head1 ATTRIBUTES
-
-=head2 C<created>
-
-  if ($oro->created) {
-    print "This is brand new!";
-  };
-
-If the database was created on construction of the handle,
-this attribute is true. Otherwise it's false.
-In most cases, this is useful to create tables, triggers
-and indices for SQLite databases.
-
-  if ($oro->created) {
-    $oro->txn(
-      sub {
-
-        # Create table
-        $oro->do(
-          'CREATE TABLE Person (
-              id    INTEGER PRIMARY KEY,
-              name  TEXT NOT NULL,
-              age   INTEGER
-          )'
-        ) or return -1;
-
-        # Create index
-        $oro->do(
-          'CREATE INDEX age_i ON Person (age)'
-        ) or return -1;
-    });
-  };
-
-B<This attribute is EXPERIMENTAL and may change without warnings.>
 
 =head2 C<dbh>
 
@@ -1760,7 +1683,7 @@ The DBI database handle.
 
   print $oro->driver;
 
-The driver (e.g., 'SQLite') of the Oro instance.
+The driver (e.g., 'SQLite' or 'MySQL') of the Oro instance.
 
 
 =head2 C<last_insert_id>
@@ -1791,7 +1714,7 @@ B<The array return is EXPERIMENTAL and may change without warnings.>
 
 =head2 C<new>
 
-  $oro = DBIx::Oro->new('test.sqlite');
+  my $oro = DBIx::Oro->new('test.sqlite');
   $oro = DBIx::Oro->new('test.sqlite' => sub {
     shift->do(
       'CREATE TABLE Person (
@@ -1800,6 +1723,12 @@ B<The array return is EXPERIMENTAL and may change without warnings.>
           age   INTEGER
       )');
   });
+  $oro = DBIx::Oro->new(
+    driver   => 'MySQL',
+    database => 'TestDB',
+    user     => 'root',
+    password => ''
+  );
 
 Creates a new Oro database handle.
 If only a string value is given, this will default to
@@ -1816,9 +1745,9 @@ the callback function is the Oro-object.
 =head2 C<insert>
 
   $oro->insert(Person => {
-    id => 4,
+    id   => 4,
     name => 'Peter',
-    age => 24
+    age  => 24
   });
   $oro->insert(Person =>
     ['id', 'name'] => [4, 'Peter'], [5, 'Sabine']
@@ -1949,7 +1878,7 @@ special restriction parameters:
   my $users = $oro->select(
     Person => {
       -order    => ['-age','name'],
-      -group    => [age => { age => { gt => 42 } }]
+      -group    => [ age => { age => { gt => 42 } } ]
       -offset   => 1,
       -limit    => 5,
       -distinct => 1
@@ -2055,7 +1984,7 @@ current table name.
 
 See L<DBIx::Oro::Driver::SQLite> for examples of treatments.
 
-B<Treatments are EXPERIMENTAL and may change without warnings.>
+B<Treatments are heavily EXPERIMENTAL and may change without warnings.>
 
 
 =head3 Caching
