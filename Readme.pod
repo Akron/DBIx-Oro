@@ -19,7 +19,7 @@ DBIx::Oro - Simple Database Accessor
 
 =head1 DESCRIPTION
 
-L<DBIx::Oro> is a simple database accessor that provides
+L<DBIx::Oro> is a database accessor that provides
 basic functionalities to work with simple databases, especially
 in a web environment.
 
@@ -27,10 +27,12 @@ Its aim is not to be a complete abstract replacement
 for SQL communication with DBI, but to make common tasks easier.
 For now it's focused on SQLite. It should be fork- and thread-safe.
 
-See L<DBIx::Oro::Driver::SQLite> and L<DBIx::Oro::Driver::MySQL>
+See L<Driver::SQLite|DBIx::Oro::Driver::SQLite>
+and L<Driver::MySQL|DBIx::Oro::Driver::MySQL>
 for database specific drivers.
 
-B<DBIx::Oro is in alpha status. Do not rely on methods, especially
+B<DBIx::Oro is a development release!
+Do not rely on any API methods, especially
 on those marked as experimental.>
 
 
