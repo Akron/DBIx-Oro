@@ -799,7 +799,7 @@ L<DBIx::Oro> and implements the following new ones
 (with possibly overwriting inherited attributes).
 
 
-=head2 C<created>
+=head2 created
 
   if ($oro->created) {
     print "This is brand new!";
@@ -833,7 +833,7 @@ and indices for SQLite databases.
 B<This attribute is EXPERIMENTAL and may change without warnings.>
 
 
-=head2 C<file>
+=head2 file
 
   my $file = $oro->file;
   $oro->file('myfile.sqlite');
@@ -846,7 +846,7 @@ string for temporary files.
 B<This attribute is EXPERIMENTAL and may change without warnings.>
 
 
-=head2 C<foreign_keys>
+=head2 foreign_keys
 
   print $oro->foreign_keys;
   $oro->foreign_keys(0);
@@ -855,7 +855,7 @@ L<DBIx::Oro::Driver::SQLite> turns foreign keys on by default.
 To disable this, yu can set C<foreign_keys> to a false value,
 e.g. in the constructor.
 
-=head2 C<autocommit>
+=head2 autocommit
 
   print $oro->autocommit;
   $oro->autocommit(200);
@@ -874,7 +874,7 @@ L<DBIx::Oro> and implements the following new ones
 (with possibly overwriting inherited methods).
 
 
-=head2 C<new>
+=head2 new
 
   $oro = DBIx::Oro->new('test.sqlite');
   $oro = DBIx::Oro->new(':memory:');
@@ -901,7 +901,7 @@ is created.
 See L<DBIx::Oro::new> for further information.
 
 
-=head2 C<delete>
+=head2 delete
 
   $oro->delete(Person => { id => 4, -secure => 1});
 
@@ -923,7 +923,7 @@ Forces a secure deletion by overwriting all data with C<0>.
 B<The security parameter is EXPERIMENTAL and may change without warnings.>
 
 
-=head2 C<attach>
+=head2 attach
 
   $oro->attach( another_db => 'users.sqlite' );
   $oro->attach( another_db => ':memory:' );
@@ -943,7 +943,7 @@ The default prefix for tables of the parent database is C<main.>.
 B<This method is EXPERIMENTAL and may change without warnings.>
 
 
-=head2 C<detach>
+=head2 detach
 
   $oro->detach('another_db');
   $oro->detach(@another_dbs);

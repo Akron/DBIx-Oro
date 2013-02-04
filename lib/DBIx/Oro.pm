@@ -1673,7 +1673,7 @@ on those marked as experimental.>
 
 =head1 ATTRIBUTES
 
-=head2 C<dbh>
+=head2 dbh
 
   my $dbh = $oro->dbh;
   $oro->dbh(DBI->connect('...'));
@@ -1681,21 +1681,21 @@ on those marked as experimental.>
 The DBI database handle.
 
 
-=head2 C<driver>
+=head2 driver
 
   print $oro->driver;
 
 The driver (e.g., 'SQLite' or 'MySQL') of the Oro instance.
 
 
-=head2 C<last_insert_id>
+=head2 last_insert_id
 
   my $id = $oro->last_insert_id;
 
 Returns the globally last inserted id regarding the database connection.
 
 
-=head2 C<last_sql>
+=head2 last_sql
 
   print $oro->last_sql;
   my ($sql, $from_cache) = $oro->last_sql;
@@ -1714,7 +1714,7 @@ B<The array return is EXPERIMENTAL and may change without warnings.>
 =head1 METHODS
 
 
-=head2 C<new>
+=head2 new
 
   my $oro = DBIx::Oro->new('test.sqlite');
   $oro = DBIx::Oro->new('test.sqlite' => sub {
@@ -1744,7 +1744,7 @@ the database is newly created. The first parameter of
 the callback function is the Oro-object.
 
 
-=head2 C<insert>
+=head2 insert
 
   $oro->insert(Person => {
     id   => 4,
@@ -1773,7 +1773,7 @@ default value. This value is inserted for each inserted entry
 and especially useful for n:m relation tables.
 
 
-=head2 C<update>
+=head2 update
 
   my $rows = $oro->update(Person => { name => 'Daniel' }, { id => 4 });
 
@@ -1785,7 +1785,7 @@ it is tested, if the field is an element of the set.
 Returns the number of rows affected.
 
 
-=head2 C<merge>
+=head2 merge
 
   $oro->merge(Person => { age => 29 }, { name => 'Daniel' });
 
@@ -1799,7 +1799,7 @@ it is tested, if the field is an element of the set.
 Scalar condition values will be inserted, if the fields do not exist.
 
 
-=head2 C<select>
+=head2 select
 
   my $users = $oro->select('Person');
   $users = $oro->select(Person => ['id', 'name']);
@@ -2022,7 +2022,7 @@ methods are valid (e.g., L<Cache::Cache>, L<Mojo::Cache>).
 B<Caching is EXPERIMENTAL and may change without warnings.>
 
 
-=head2 C<load>
+=head2 load
 
   my $user  = $oro->load(Person, { id => 4 });
   my $user  = $oro->load(Person, ['name'], { id => 4 });
@@ -2041,7 +2041,7 @@ Fields can be column names or functions. With a colon you can define
 aliases for the field names.
 
 
-=head2 C<count>
+=head2 count
 
   my $persons = $oro->count('Person');
   my $pauls   = $oro->count('Person' => { name => 'Paul' });
@@ -2052,7 +2052,7 @@ the rows have to fulfill.
 Caching can be applied as with L<select>.
 
 
-=head2 C<delete>
+=head2 delete
 
   my $rows = $oro->delete(Person => { id => 4 });
 
@@ -2065,7 +2065,7 @@ Restrictions can be applied as with L<select>.
 Returns the number of rows that were deleted.
 
 
-=head2 C<table>
+=head2 table
 
   # Table names
   my $person = $oro->table('Person');
@@ -2095,7 +2095,7 @@ C<table> in conjunction with a joined table can be seen as an "ad hoc view".
 B<This method is EXPERIMENTAL and may change without warnings.>
 
 
-=head2 C<txn>
+=head2 txn
 
   $oro->txn(
     sub {
@@ -2119,7 +2119,7 @@ Transactions established with this method can be securely nested
 on the driver).
 
 
-=head2 C<import_sql>
+=head2 import_sql
 
   my $oro = DBIx::Oro->new(
     driver => 'SQLite',
@@ -2138,7 +2138,7 @@ using one comment line starting with C<-- ->.
 B<This method is EXPERIMENTAL and may change without warnings.>
 
 
-=head2 C<do>
+=head2 do
 
   $oro->do(
     'CREATE TABLE Person (
@@ -2150,7 +2150,7 @@ Executes SQL code.
 This is a wrapper for the DBI C<do()> method (but fork- and thread-safe).
 
 
-=head2 C<explain>
+=head2 explain
 
   print $oro->explain(
     'SELECT ? FROM Person', ['name']
@@ -2161,7 +2161,7 @@ Returns the query plan for a given query as a line-breaked string.
 B<This method is EXPERIMENTAL and may change without warnings.>
 
 
-=head2 C<prep_and_exec>
+=head2 prep_and_exec
 
   my ($rv, $sth) = $oro->prep_and_exec(
     'SELECT ? FROM Person', ['name'], 'cached'
@@ -2190,7 +2190,7 @@ statement should be cached by L<DBI>.
 
 =head1 EVENTS
 
-=head2 C<on_connect>
+=head2 on_connect
 
   $oro->on_connect(
     sub { $log->debug('New connection established') }
