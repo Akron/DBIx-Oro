@@ -7,6 +7,8 @@ BEGIN { @ISA = 'DBIx::Oro' };
 
 use v5.10.1;
 
+# Todo: use 'truncate' for table deletion
+
 # Defaults to 500 for SQLITE_MAX_COMPOUND_SELECT
 use constant MAX_COMP_SELECT => 500;
 
