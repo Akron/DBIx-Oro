@@ -8,6 +8,16 @@ our $VERSION = '0.26';
 
 # Todo: -prefix is not documented!
 # Todo. Put 'Created' in SQLite driver
+#       implement ->errstr
+#       implement "-with" (?)
+# Debug: $lemma_oro->insert({
+#          wcl => $_,
+#          lemma => $inter
+#        },{
+#          token => $search_for
+#        });
+#        (Should raise error)
+# Debug: DBIx::Oro-Treatment in Joint Tables
 
 use v5.10.1;
 
@@ -1770,7 +1780,7 @@ long array of array references of values to insert.
 For multiple insertions with defaults, the arrayref for column
 names can contain array references with a column name and the
 default value. This value is inserted for each inserted entry
-and especially useful for n:m relation tables.
+and is especially useful for n:m relation tables.
 
 
 =head2 update
@@ -1790,7 +1800,7 @@ Returns the number of rows affected.
   $oro->merge(Person => { age => 29 }, { name => 'Daniel' });
 
 Updates values of an existing row of a given table,
-otherways inserts them (so called I<upsert>).
+otherwise inserts them (so called I<upsert>).
 Expects the table name to update or insert, a hash ref of
 values to update or insert, and optionally a hash ref with conditions,
 the rows have to fulfill.
