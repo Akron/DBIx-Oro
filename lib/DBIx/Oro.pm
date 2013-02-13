@@ -1546,8 +1546,7 @@ sub _fields {
 	# Implicite field alias
 	elsif (m/^(?:.+?)\.(?:[^\.]+?)$/) {
 	  my $cl = _clean_alias $_;
-	  $_ . ' AS `' . $cl . '`';
-	  $alias{$cl} = $_;
+	  $alias{$cl} = qq{$_ AS `$cl`};
 	}
 
 	# Field value
