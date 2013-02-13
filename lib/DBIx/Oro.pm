@@ -2,7 +2,7 @@ package DBIx::Oro;
 use strict;
 use warnings;
 
-our $VERSION = '0.26';
+our $VERSION = '0.27';
 
 # See the bottom of this file for the POD documentation.
 
@@ -60,6 +60,28 @@ our $VALID_GROUPORDER_REGEX =
 our $FIELD_REST_RE = qr/^(.+?)(:~?)([^:"~][^:"]*?)$/;
 
 our $CACHE_COMMENT = 'From Cache';
+
+our @EXTENSIONS = ();
+
+
+# Import extension
+sub import {
+  my $class = shift;
+
+  # Load extensions
+  foreach (@_) {
+    my $module = qq{DBIx::Oro::Extension::$_};
+    unless (eval "require $module; 1;") {
+      croak qq{Unable to load extension "$_"} and return;
+    };
+
+    # Push to extension array
+    push(@EXTENSIONS, $_);
+
+    # Start import for extensions
+    $module->import;
+  };
+};
 
 
 # Constructor
@@ -249,6 +271,12 @@ sub last_sql {
 
 # Database driver
 sub driver { '' };
+
+
+# Extensions
+sub extension {
+  return @EXTENSIONS;
+};
 
 
 # Insert values to database
@@ -1695,6 +1723,13 @@ The DBI database handle.
   print $oro->driver;
 
 The driver (e.g., 'SQLite' or 'MySQL') of the Oro instance.
+
+
+=head2 extension
+
+  print join ', ', $self->extension;
+
+All installed extensions of the Oro class.
 
 
 =head2 last_insert_id
