@@ -550,6 +550,7 @@ sub select {
       };
 
       # Finish if callback returns -1
+      local $_ = $row;
       my $rv = $cb->($row);
       if ($rv && $rv eq '-1') {
 	$result = undef;

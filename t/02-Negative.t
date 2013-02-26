@@ -1,7 +1,8 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use Test::More;
+use Test::More tests => 67;
+
 use Data::Dumper;
 use File::Temp qw/:POSIX/;
 
@@ -25,9 +26,6 @@ unless ($suite) {
   plan skip_all => 'Database not properly configured';
   exit(0);
 };
-
-# Start test
-plan tests => 63;
 
 use_ok 'DBIx::Oro';
 
@@ -149,6 +147,13 @@ $oro->select('Content' => sub {
 		    'Select');
 	     });
 
+$oro->select('Content' => sub {
+	       like($_->{content},
+		    qr/This is (?:changed|third) content\./,
+		    'Select');
+	     });
+
+
 my $once = 1;
 $oro->select('Content' => sub {
 	       ok($once--, 'Select Once');
@@ -162,6 +167,13 @@ $oro->select('Name' => ['prename'] =>
 	       sub {
 		 ok(!exists $_[0]->{surname}, 'Fields');
 		 ok($_[0]->{prename}, 'Fields');
+	     });
+
+# Callback with local $_;
+$oro->select('Name' => ['prename'] =>
+	       sub {
+		 ok(!exists $_->{surname}, 'Fields');
+		 ok($_->{prename}, 'Fields');
 	     });
 
 ok($oro->insert(Name => { prename => 'Ulli' }), 'Insert Ulli');
@@ -232,7 +244,5 @@ ok(!$oro->count(
     ['prename'] => {
       prename => 'Sabine'
     }), 'Ignore fields in Count');
-
-
 
 __END__
