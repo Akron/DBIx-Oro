@@ -193,9 +193,8 @@ Scalar condition values will be inserted, if the fields do not exist.
     Person => ['id', 'age'] => {
       name => { like => 'Dani%' }} =>
         sub {
-          my $user = shift;
-          say $user->{id};
-          $age += $user->{age};
+          say $_->{id};
+          $age += $_->{age};
           return -1 if $age >= 100;
     });
 
@@ -228,7 +227,8 @@ When checking with hash refs, several operators are supported.
       },
       age => {
         between => [18, 48],
-        ne      => 30
+        ne      => 30,
+        not     => [45,46]
       }
     }
   );
@@ -238,7 +238,9 @@ Supported operators are '<' ('lt'), '>' ('gt'), '=' ('eq'),
 String comparison operators like C<like> and similar are supported.
 To negate the latter operators you can prepend 'not_'.
 The 'between' and 'not_between' operators are special as they expect
-a two value array as their operand.
+a two value array as their operand. The single 'not' operator
+accepts an array as a set and is true, if the element is not
+element of the set.
 To test for existence, use C<value =E<gt> { not =E<gt> undef }>.
 Multiple operators for checking with the same column are supported.
 
@@ -478,7 +480,7 @@ B<This method is EXPERIMENTAL and may change without warnings.>
 
       $oro->txn(
         sub {
-          $oro->insert('Person' => { name => 'Fry' }) or return -1;
+          $_->insert('Person' => { name => 'Fry' }) or return -1;
         }) or return -1;
     });
 

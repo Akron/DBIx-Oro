@@ -1385,7 +1385,7 @@ sub _get_pairs {
       # Element of
       elsif (ref $value eq 'ARRAY') {
 	# Undefined values in the array are not specified
-	# as ' IN (NULL, ...) does not work
+	# as ' IN (NULL, ...)' does not work
 	push (@pairs, "$key IN (" . _q($value) . ')' ),
 	  push(@values, @$value);
       }
@@ -1407,8 +1407,27 @@ sub _get_pairs {
 	      s/==/=/o;
 	    };
 
+	    # Array operators
+	    if (ref $val && ref $val eq 'ARRAY') {
+
+	      # Between operator
+	      if (index($op, 'BETWEEN') >= 0) {
+		push(@pairs, "$key $op ? AND ?"),
+		  push(@values, @{$val}[0, 1]);
+	      }
+
+	      # Not element of
+	      elsif ($op =~ /^NOT( IN)?$/) {
+		# Undefined values in the array are not specified
+		# as ' NOT IN (NULL, ...)' does not work
+
+		push(@pairs, "$key NOT IN (" . _q($val) . ')' ),
+		  push(@values, @$val);
+	      };
+	    }
+
 	    # Simple operator
-	    if (index($op, 'BETWEEN') == -1) {
+	    else {
 	      my $p = "$key $op ";
 
 	      # Value is an object
@@ -1429,13 +1448,8 @@ sub _get_pairs {
 	      };
 
 	      push(@pairs, $p);
-	    }
-
-	    # Between operator
-	    elsif (ref $val && ref $val eq 'ARRAY') {
-	      push(@pairs, "$key $op ? AND ?"),
-		push(@values, @{$val}[0, 1]);
 	    };
+
 	  } else {
 	    carp "Unknown Oro operator $key $op $val" and next;
 	  }
@@ -1901,7 +1915,8 @@ When checking with hash refs, several operators are supported.
       },
       age => {
         between => [18, 48],
-        ne      => 30
+        ne      => 30,
+        not     => [45,46]
       }
     }
   );
@@ -1911,7 +1926,9 @@ Supported operators are '<' ('lt'), '>' ('gt'), '=' ('eq'),
 String comparison operators like C<like> and similar are supported.
 To negate the latter operators you can prepend 'not_'.
 The 'between' and 'not_between' operators are special as they expect
-a two value array as their operand.
+a two value array as their operand. The single 'not' operator
+accepts an array as a set and is true, if the element is not
+element of the set.
 To test for existence, use C<value =E<gt> { not =E<gt> undef }>.
 Multiple operators for checking with the same column are supported.
 

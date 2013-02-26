@@ -27,7 +27,7 @@ unless ($suite) {
 };
 
 # Start test
-plan tests => 49;
+plan tests => 53;
 
 use_ok 'DBIx::Oro';
 
@@ -162,3 +162,10 @@ $result = $oro->select(Content => { author_id => { not_between => [2, 1110] } })
 is($result->[0]->{content}, '1', 'Select with not_between');
 is($result->[1]->{content}, '1111', 'Select with not_between');
 is(@$result, 2, 'Select with not_between');
+
+# Not element of
+$result = $oro->select(Content => { author_id => { le => 6, not => [3,4] }});
+is($result->[0]->{content}, '1', 'Select with not in');
+is($result->[1]->{content}, '2', 'Select with not in');
+is($result->[2]->{content}, '5', 'Select with not in');
+is($result->[3]->{content}, '6', 'Select with not in');
