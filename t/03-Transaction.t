@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use Test::More;
+use Test::More tests => 34;
 use Data::Dumper;
 
 $|++;
@@ -24,9 +24,6 @@ unless ($suite) {
   plan skip_all => 'Database not properly configured';
   exit(0);
 };
-
-# Start test
-plan tests => 32;
 
 use_ok 'DBIx::Oro';
 
@@ -159,3 +156,14 @@ ok($oro->txn(
   }), 'Transaction');
 
 is($oro->count('Content'), 313, 'Count');
+
+
+# Local return
+ok($oro->txn(
+  sub {
+    $_->insert(Content => { title => 'Check local' });
+  }), 'Transaction');
+
+is($oro->count('Content' => { title => 'Check local' }), 1, 'Count');
+
+

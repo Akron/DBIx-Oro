@@ -1,6 +1,7 @@
 0.27 2013-02-13
         - Enable extensions.
 	- Add local $_ to select callbacks.
+	- Add local $_ to transaction callbacks.
 
 0.26 2013-02-05
         - Updated year.

@@ -879,6 +879,7 @@ sub txn {
     ${$self->{in_txn}} = 1;
 
     # start
+    local $_ = $self;
     my $rv = $_[0]->($self);
     if (!$rv || $rv ne '-1') {
       ${$self->{in_txn}} = 0;
@@ -1866,9 +1867,8 @@ Scalar condition values will be inserted, if the fields do not exist.
     Person => ['id', 'age'] => {
       name => { like => 'Dani%' }} =>
         sub {
-          my $user = shift;
-          say $user->{id};
-          $age += $user->{age};
+          say $_->{id};
+          $age += $_->{age};
           return -1 if $age >= 100;
     });
 
@@ -2151,7 +2151,7 @@ B<This method is EXPERIMENTAL and may change without warnings.>
 
       $oro->txn(
         sub {
-          $oro->insert('Person' => { name => 'Fry' }) or return -1;
+          $_->insert('Person' => { name => 'Fry' }) or return -1;
         }) or return -1;
     });
 
