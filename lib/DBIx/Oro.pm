@@ -1874,8 +1874,8 @@ Scalar condition values will be inserted, if the fields do not exist.
 
   $oro->select(
     Person => sub {
-      say $_[0]->{id};
-      return -1 if $_[0]->{name} eq 'Peter';
+      print $_->{id}, "\n";
+      return -1 if $_->{name} eq 'Peter';
     });
 
   my $age = 0;
@@ -1883,7 +1883,7 @@ Scalar condition values will be inserted, if the fields do not exist.
     Person => ['id', 'age'] => {
       name => { like => 'Dani%' }} =>
         sub {
-          say $_->{id};
+          print $_->{id}, "\n";
           $age += $_->{age};
           return -1 if $age >= 100;
     });
@@ -2268,7 +2268,7 @@ statement should be cached by L<DBI>.
     my_event => sub {
       shift->insert(Log => { msg => 'reconnect' } )
     })) {
-    say 'Event newly established!';
+    print 'Event newly established!';
   };
 
 Add a callback for execution in case of newly established
