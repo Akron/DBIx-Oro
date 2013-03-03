@@ -7,7 +7,7 @@ our $VERSION = '0.27';
 # See the bottom of this file for the POD documentation.
 
 # Todo: -prefix is not documented!
-# Todo. Put 'Created' in SQLite driver
+# Todo: Put 'Created' in SQLite driver
 #       implement ->errstr
 #       implement "-with" (?)
 # Debug: $lemma_oro->insert({
@@ -18,6 +18,9 @@ our $VERSION = '0.27';
 #        });
 #        (Should raise error)
 # Debug: DBIx::Oro-Treatment in Joint Tables
+# Deprecate: Delete import_sql method and
+#            make it an extension
+# Todo: Support left outer join
 
 use v5.10.1;
 
@@ -1773,7 +1776,6 @@ B<The array return is EXPERIMENTAL and may change without warnings.>
 
 =head1 METHODS
 
-
 =head2 new
 
   my $oro = DBIx::Oro->new('test.sqlite');
@@ -1903,6 +1905,7 @@ With a colon you can define aliases for the field names.
 
 B<The callback is EXPERIMENTAL and may change without warnings.>
 
+
 =head3 Operators
 
 When checking with hash refs, several operators are supported.
@@ -1934,6 +1937,7 @@ Multiple operators for checking with the same column are supported.
 
 B<Operators are EXPERIMENTAL and may change without warnings.>
 
+
 =head3 Restrictions
 
 In addition to conditions, the selection can be restricted by using
@@ -1951,41 +1955,42 @@ special restriction parameters:
 
 =over 2
 
-=item C<-order>
+=item
 
-Sorts the result set by field names.
+C<-order>: Sorts the result set by field names.
 Field names can be scalars or array references of field names ordered
 by priority.
 A leading minus of the field name will use descending order,
 otherwise ascending order.
 
-=item C<-group>
+=item
 
-Groups the result set by field names.
+C<-group>: Groups the result set by field names.
 Especially useful with aggregation operators like C<count()>.
 Field names can be scalars or array references of field names ordered
 by priority.
 In case of an array reference, the final element can be a hash
 reference for a C<having> condition.
 
-=item C<-limit>
+=item
 
-Limits the number of rows in the result set.
+C<-limit>: Limits the number of rows in the result set.
 
-=item C<-offset>
+=item
 
-Sets the offset of the result set.
+C<-offset>: Sets the offset of the result set.
 
-=item C<-distinct>
+=item
 
-Boolean value. If set to a true value, only distinct rows are returned.
+C<-distinct>: Boolean value. If set to a true value, only distinct rows are returned.
 
 =back
+
 
 =head3 Joined Tables
 
 Instead of preparing a select on only one table, it's possible to
-use any number of tables and perform a simple join:
+use any number of tables and perform a simple equi-join:
 
   $oro->select(
     [
@@ -2018,6 +2023,7 @@ callback have to follow immediately.
 
 B<Joins are EXPERIMENTAL and may change without warnings.>
 
+
 =head3 Treatments
 
 Sometimes field functions and returned values shall be treated
@@ -2046,7 +2052,7 @@ Outer subroutines are executed as long as the first value is not a string
 value. The only parameter passed to the outer subroutine is the
 current table name.
 
-See L<DBIx::Oro::Driver::SQLite> for examples of treatments.
+See the L<SQLite Driver|DBIx::Oro::Driver::SQLite> for examples of treatments.
 
 B<Treatments are heavily EXPERIMENTAL and may change without warnings.>
 
@@ -2290,8 +2296,8 @@ L<Scalar::Util>.
 
 =head1 INSTALL
 
-When not installing via package manager or CPAN, you can install
-Oro manually, using
+When not installing via a package manager, CPAN or cpanm,
+you can install Oro manually, using
 
   $ perl Makefile.PL
   $ make
