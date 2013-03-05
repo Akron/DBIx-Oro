@@ -977,6 +977,8 @@ sub last_insert_id {
 sub import_sql {
   my $self = shift;
 
+  carp 'import_sql is deprecated and will be deleted in further versions';
+
   # Get callback
   my $cb = pop @_ if ref $_[-1] && ref $_[-1] eq 'CODE';
 
@@ -1646,12 +1648,12 @@ sub _restrictions {
   if ($prep->{limit}) {
     $sql .= ' LIMIT ?';
     push(@$values, delete $prep->{limit});
-  };
 
-  # Offset restriction
-  if (defined $prep->{offset}) {
-    $sql .= ' OFFSET ?';
-    push(@$values, delete $prep->{offset});
+    # Offset restriction
+    if (defined $prep->{offset}) {
+      $sql .= ' OFFSET ?';
+      push(@$values, delete $prep->{offset});
+    };
   };
 
   $sql;
@@ -2185,25 +2187,6 @@ Otherwise the actions will be released.
 Transactions established with this method can be securely nested
 (although inner transactions may not be true transactions depending
 on the driver).
-
-
-=head2 import_sql
-
-  my $oro = DBIx::Oro->new(
-    driver => 'SQLite',
-    file   => ':memory:,
-    import => ['myschema.sql', 'mydata.sql']
-  );
-
-  $oro->import_sql('mydb.sql');
-  $oro->import_sql(qw/myschema.sql mydata.sql/);
-  $oro->import_sql(['myschema.sql', 'mydata.sql']);
-
-Loads a single or multiple SQL documents (utf-8) and applies
-all statements sequentially. Each statement has to be delimited
-using one comment line starting with C<-- ->.
-
-B<This method is EXPERIMENTAL and may change without warnings.>
 
 
 =head2 do

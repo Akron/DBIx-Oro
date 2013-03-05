@@ -496,25 +496,6 @@ Transactions established with this method can be securely nested
 on the driver).
 
 
-=head2 import_sql
-
-  my $oro = DBIx::Oro->new(
-    driver => 'SQLite',
-    file   => ':memory:,
-    import => ['myschema.sql', 'mydata.sql']
-  );
-
-  $oro->import_sql('mydb.sql');
-  $oro->import_sql(qw/myschema.sql mydata.sql/);
-  $oro->import_sql(['myschema.sql', 'mydata.sql']);
-
-Loads a single or multiple SQL documents (utf-8) and applies
-all statements sequentially. Each statement has to be delimited
-using one comment line starting with C<-- ->.
-
-B<This method is EXPERIMENTAL and may change without warnings.>
-
-
 =head2 do
 
   $oro->do(

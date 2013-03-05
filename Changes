@@ -3,6 +3,7 @@
 	- Add local $_ to select callbacks.
 	- Add local $_ to transaction callbacks.
 	- Add 'not in' operator.
+	- Make 'Offset' only work inside 'limit'
 
 0.26 2013-02-05
         - Updated year.

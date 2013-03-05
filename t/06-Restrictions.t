@@ -27,7 +27,7 @@ unless ($suite) {
 };
 
 # Start test
-plan tests => 33;
+plan tests => 34;
 
 use_ok 'DBIx::Oro';
 
@@ -65,6 +65,19 @@ is_deeply($content->select(
     { title => 'New Content 2' },
     { title => 'New Content' }
   ], 'Offset restriction');
+
+# Offset is ignored
+no_warn {
+  is_deeply($content->select(
+    ['title'] => {
+      -order => '-title',
+      -offset => 5
+    }), [
+      { title => 'New Content 3' },
+      { title => 'New Content 2' },
+      { title => 'New Content' }
+    ], 'Offset restriction');
+};
 
 is_deeply($content->select(
   ['title'] => {
