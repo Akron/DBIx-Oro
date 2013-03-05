@@ -781,7 +781,7 @@ DBIx::Oro::Driver::SQLite - SQLite driver for DBIx::Oro
 
   my $birthday =
     $oro->load(Blog =>
-      [ $oro->snippet => 'snippet'] => {
+      [ $snippet => 'snippet'] => {
         Blog => { match => 'birthday' }
     });
 
@@ -857,6 +857,7 @@ L<DBIx::Oro::Driver::SQLite> turns foreign keys on by default.
 To disable this, yu can set C<foreign_keys> to a false value,
 e.g. in the constructor.
 
+
 =head2 autocommit
 
   print $oro->autocommit;
@@ -908,7 +909,8 @@ See L<DBIx::Oro::new> for further information.
   $oro->delete(Person => { id => 4, -secure => 1});
 
 Deletes rows of a given table, that meet a given condition.
-See L<DBIx::Oro::delete> for further information.
+See L<delete in DBIx::Oro|DBIx::Oro/delete> for further information.
+
 
 =head3 Security
 
@@ -958,7 +960,7 @@ B<This method is EXPERIMENTAL and may change without warnings.>
 =head1 TREATMENTS
 
 Treatments can be used for the manipulation of C<select> and C<load>
-queries. See L<DBIx::Oro::select> for further information.
+queries. See L<select in DBIx::Oro|DBIx::Oro/select> for further information.
 
 L<DBIx::Oro::Driver::SQLite> implements the following
 treatments.
@@ -1044,11 +1046,8 @@ extensions at L<https://sqlite.org/fts3.html>.
 
 =head1 DEPENDENCIES
 
-L<Carp>,
 L<DBI>,
-L<DBD::SQLite>,
-L<File::Path>,
-L<File::Basename>.
+L<DBD::SQLite>.
 
 
 =head1 AVAILABILITY

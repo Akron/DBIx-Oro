@@ -21,6 +21,9 @@ our $VERSION = '0.27';
 # Deprecate: Delete import_sql method and
 #            make it an extension
 # Todo: Support left outer join
+# Todo: Create all Queries in DBIx::Oro::Query
+# Todo: To change queries from different drivers,
+#       use events.
 
 use v5.10.1;
 
@@ -73,6 +76,8 @@ sub import {
 
   # Load extensions
   foreach (@_) {
+
+    # Load extensions
     my $module = qq{DBIx::Oro::Extension::$_};
     unless (eval "require $module; 1;") {
       croak qq{Unable to load extension "$_"} and return;
@@ -1718,7 +1723,8 @@ in a web environment.
 
 Its aim is not to be a complete abstract replacement
 for SQL communication with DBI, but to make common tasks easier.
-For now it's focused on SQLite. It should be fork- and thread-safe.
+For now it's focused on SQLite - but first steps to make it less
+dependent on SQLite is done. It should be fork- and thread-safe.
 
 See L<Driver::SQLite|DBIx::Oro::Driver::SQLite>
 and L<Driver::MySQL|DBIx::Oro::Driver::MySQL>
@@ -1744,13 +1750,6 @@ The DBI database handle.
   print $oro->driver;
 
 The driver (e.g., 'SQLite' or 'MySQL') of the Oro instance.
-
-
-=head2 extension
-
-  print join ', ', $self->extension;
-
-All installed extensions of the Oro class.
 
 
 =head2 last_insert_id
@@ -2269,12 +2268,8 @@ B<This event is EXPERIMENTAL and may change without warnings.>
 
 =head1 DEPENDENCIES
 
-L<Carp>,
 L<DBI>,
-L<DBD::SQLite>,
-L<File::Path>,
-L<File::Basename>,
-L<Scalar::Util>.
+L<DBD::SQLite>.
 
 
 =head1 INSTALL
