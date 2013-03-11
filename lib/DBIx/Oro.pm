@@ -7,7 +7,7 @@ our $VERSION = '0.27';
 # See the bottom of this file for the POD documentation.
 
 # Todo: -prefix is not documented!
-# Todo: Put 'Created' in SQLite driver
+# Todo: Put 'created' in SQLite driver
 #       implement ->errstr
 #       implement "-with" (?)
 # Debug: $lemma_oro->insert({
@@ -24,6 +24,7 @@ our $VERSION = '0.27';
 # Todo: Create all Queries in DBIx::Oro::Query
 # Todo: To change queries from different drivers,
 #       use events.
+# Todo: Return key -column_order => [] with fetchall_arrayref.
 
 use v5.10.1;
 
