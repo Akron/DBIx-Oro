@@ -1975,7 +1975,9 @@ special restriction parameters, all prepended by a C<-> symbol:
 
 =item
 
-C<-order>: Sorts the result set by field names.
+C<-order>
+
+Sorts the result set by field names.
 Field names can be scalars or array references of field names ordered
 by priority.
 A leading minus of the field name will use descending order,
