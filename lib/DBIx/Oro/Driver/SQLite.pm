@@ -10,7 +10,7 @@ use v5.10.1;
 # Todo: use 'truncate' for table deletion
 
 # Defaults to 500 for SQLITE_MAX_COMPOUND_SELECT
-use constant MAX_COMP_SELECT => 500;
+our $MAX_COMP_SELECT => 500;
 
 use Carp qw/carp/;
 
@@ -327,7 +327,7 @@ sub insert {
     my $union = 'SELECT ' . _q(\@keys);
 
     # Maximum bind variables
-    my $max = (MAX_COMP_SELECT / @keys) - @keys;
+    my $max = ($MAX_COMP_SELECT / @keys) - @keys;
 
     if (scalar @_ <= $max) {
 
@@ -751,28 +751,36 @@ DBIx::Oro::Driver::SQLite - SQLite driver for DBIx::Oro
 
   use DBIx::Oro;
 
+  # Create an SQLite Oro object
   my $oro = DBIx::Oro->new('file.sqlite');
 
-  $db->attach(blog => ':memory:');
+  # Attach new databases
+  $oro->attach(blog => ':memory:');
 
+  # Check, if database was newly created
   if ($oro->created) {
-    $oro->do(
-    'CREATE TABLE Person (
-        id    INTEGER PRIMARY KEY,
-        name  TEXT NOT NULL,
-        age   INTEGER
-     )');
 
+    # Create table
+    $oro->do(
+      'CREATE TABLE Person (
+          id    INTEGER PRIMARY KEY,
+          name  TEXT NOT NULL,
+          age   INTEGER
+       )');
+
+    # Create Fulltext Search tables
     $oro->do(
       'CREATE VIRTUAL TABLE Blog USING fts4(title, body)'
     );
   };
 
+  # Insert values
   $oro->insert(Blog => {
     title => 'My Birthday',
     body  => 'It was a wonderful party!'
   });
 
+  # Create snippet treatment function
   my $snippet = $oro->snippet(
     start => '<strong>',
     end   => '</strong>',
@@ -781,17 +789,22 @@ DBIx::Oro::Driver::SQLite - SQLite driver for DBIx::Oro
 
   my $birthday =
     $oro->load(Blog =>
-      [ $snippet => 'snippet'] => {
+      [[ $snippet => 'snippet']] => {
         Blog => { match => 'birthday' }
-    });
+      });
 
   print $birthday->{snippet};
+  # My <strong>Birthday</strong>
 
 
 =head1 DESCRIPTION
 
 L<DBIx::Oro::Driver::SQLite> is an SQLite specific database
 driver for L<DBIx::Oro> that provides further functionalities.
+
+B<DBIx::Oro::Driver::SQLite is a development release!
+Do not rely on any API methods, especially
+on those marked as experimental.>
 
 
 =head1 ATTRIBUTES
@@ -832,8 +845,6 @@ and indices for SQLite databases.
     });
   };
 
-B<This attribute is EXPERIMENTAL and may change without warnings.>
-
 
 =head2 file
 
@@ -842,10 +853,8 @@ B<This attribute is EXPERIMENTAL and may change without warnings.>
 
 The sqlite file of the database.
 This can be a filename (with a path prefix),
-':memory:' for memory databases or the empty
+C<:memory:> for memory databases or the empty
 string for temporary files.
-
-B<This attribute is EXPERIMENTAL and may change without warnings.>
 
 
 =head2 foreign_keys
@@ -854,7 +863,7 @@ B<This attribute is EXPERIMENTAL and may change without warnings.>
   $oro->foreign_keys(0);
 
 L<DBIx::Oro::Driver::SQLite> turns foreign keys on by default.
-To disable this, yu can set C<foreign_keys> to a false value,
+To disable this, set C<foreign_keys> to a false value,
 e.g. in the constructor.
 
 
@@ -867,7 +876,7 @@ Run commit after a given number of C<insert>, C<update>, C<delete>
 or C<merge> operations. Accepts the number of silent operations
 till the commit is released. Will automatically commit on start.
 To release unstaged changes at the end, just reset autocommit,
-e.g. with C<$oro-E<gt>autocommit(0)>.
+e.g. with C<autocommit(0)>.
 
 
 =head1 METHODS
@@ -879,7 +888,7 @@ L<DBIx::Oro> and implements the following new ones
 
 =head2 new
 
-  $oro = DBIx::Oro->new('test.sqlite');
+  my $oro = DBIx::Oro->new('test.sqlite');
   $oro = DBIx::Oro->new(':memory:');
   $oro = DBIx::Oro->new('');
   $oro = DBIx::Oro->new(
@@ -897,14 +906,14 @@ L<DBIx::Oro> and implements the following new ones
   );
 
 Creates a new SQLite database accessor object on the
-given filename or in memory, if the filename is ':memory:'.
+given filename or in memory, if the filename is C<:memory:>.
 If the database file does not already exist, it is created.
 If the file is the empty string, a temporary database
 is created. A callback function call C<init> will be triggered,
 if the database was newly created.
 The first parameter of the callback function is the Oro object.
 
-See L<DBIx::Oro::new> for further information.
+See L<new in DBIx::Oro|DBIx::Oro/new> for further information.
 
 
 =head2 delete
@@ -935,10 +944,12 @@ B<The security parameter is EXPERIMENTAL and may change without warnings.>
   $oro->attach( another_db => 'users.sqlite' );
   $oro->attach( another_db => ':memory:' );
   $oro->attach( 'another_db' );
+
   $oro->load( 'another_db.user' => { id => 4 } );
 
 Attaches another database file to the connector. All tables of this
 database can then be queried with the same connector.
+
 Accepts the database handle name and a database file name.
 If the file name is ':memory:' a new database is created in memory.
 If no file name is given, a temporary database is created.
@@ -962,18 +973,20 @@ B<This method is EXPERIMENTAL and may change without warnings.>
 
 =head1 TREATMENTS
 
-Treatments can be used for the manipulation of C<select> and C<load>
-queries. See L<select in DBIx::Oro|DBIx::Oro/select> for further information.
+Treatments can be used for the manipulation of L<select|DBIx::Oro/select>
+and L<load|DBIx::Oro/load> queries.
 
 L<DBIx::Oro::Driver::SQLite> implements the following
-treatments.
+treatment generators.
 
 
 =head3 C<matchinfo>
 
-  my $result = $oro->select(text =>
-                 [[ $oro->matchinfo('nls') => 'matchinfo']] =>
-                   { text => { match => 'default transaction' }};
+  my $result = $oro->select(
+    text =>
+      [[ $oro->matchinfo('nls') => 'matchinfo']] => {
+        text => { match => 'default transaction' }
+      });
 
   # $result = [{
   #   matchinfo => {
@@ -993,13 +1006,14 @@ treatments.
   #   }
   # }];
 
-Creates a treatment for C<select> or C<load> that supports
+Creates a treatment for L<select|DBIx::Oro/select> or L<load|DBIx::Oro/load> that supports
 matchinfo information for fts3/fts4 tables.
 It accepts a format string containing the characters
-'p', 'c', 'n', 'a', 'l', 's', and 'x'.
-See the SQLite manual for further information on these characters.
-The characters 'p' and 'c' will always be set.
-Returns the column value as a hash ref of the associated values.
+C<p>, C<c>, C<n>, C<a>, C<l>, C<s>, and C<x>.
+See the L<SQLite manual|https://www.sqlite.org/fts3.html#matchinfo>
+for further information on these characters.
+The characters C<p> and C<c> will always be set.
+Returns the column value as a hash reference of the associated values.
 
 
 =head3 C<offsets>
@@ -1010,12 +1024,19 @@ Returns the column value as a hash ref of the associated values.
         text => { match => 'world' }
       });
 
-  # $result = { 'offset' => [[0, 0, 6, 5], [1, 0, 24, 5]] };
+  # $result = {
+  #   offset => [
+  #     [0, 0, 6, 5],
+  #     [1, 0, 24, 5]
+  #   ]
+  # };
 
-Creates a treatment for C<select> or C<load> that supports offset
-information for fts3/fts4 tables.
+Creates a treatment for L<select|DBIx::Oro/select> or L<load|DBIx::Oro/load> that supports
+offset information for fts3/fts4 tables.
 It accepts no parameters and returns the column value as an array reference
 containing multiple array references.
+
+See the L<SQLite manual|https://www.sqlite.org/fts3.html#section_4_1> for further information.
 
 
 =head3 C<snippet>
@@ -1028,23 +1049,28 @@ containing multiple array references.
     column   => 1
   );
 
-  my $result = $oro->select(
+  my $result = $oro->load(
     text =>
       [[ $snippet => 'excerpt' ]] => {
         text => { match => 'cold' }
       });
 
-Creates a treatment for C<select> or C<load> that supports snippets for
-fts3/fts4 tables.
+  print $result->{excerpt};
+  # It was [cold] outside
+
+Creates a treatment for L<select|DBIx::Oro/select> or L<load|DBIx::Oro/load> that supports
+snippets for fts3/fts4 tables.
 On creation it accepts the parameters C<start>, C<end>, C<ellipsis>,
-C<token>, and C<column>. See the SQLite manual for a description on these.
+C<token>, and C<column>.
+
+See the L<SQLite manual|https://www.sqlite.org/fts3.html#section_4_2> for further information.
 
 
 =head1 SEE ALSO
 
-The SQLite manual can be found at L<https://sqlite.org/>.
-Especially interesting is the information regarding the fulltext search
-extensions at L<https://sqlite.org/fts3.html>.
+The L<SQLite manual|https://sqlite.org/>,
+especially the information regarding the
+L<fulltext search extensions|https://sqlite.org/fts3.html>.
 
 
 =head1 DEPENDENCIES

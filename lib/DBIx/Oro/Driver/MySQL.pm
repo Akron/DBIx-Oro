@@ -72,22 +72,54 @@ DBIx::Oro::Driver::MySQL - MySQL driver for DBIx::Oro
 
   use DBIx::Oro;
 
+  # Create
   my $oro = DBIx::Oro->new(
     driver   => 'MySQL',
     database => 'TestDB',
     user     => 'root',
-    password => ''
+    password => 's3cr3t'
   );
+
+  $oro->insert(Person => {
+    id   => 4,
+    name => 'Peter',
+    age  => 24
+  });
+
 
 =head1 DESCRIPTION
 
 L<DBIx::Oro::Driver::MySQL> is a MySQL specific database
 driver for L<DBIx::Oro> that provides further functionalities.
 
+B<DBIx::Oro::Driver::SQLite is a development release!
+Do not rely on any API methods, especially
+on those marked as experimental.>
+
+
+=head1 METHODS
+
+L<DBIx::Oro::Driver::SQLite> inherits all methods from
+L<DBIx::Oro> and implements the following new ones
+(with possibly overwriting inherited methods).
+
+
+=head2 new
+
+  my $oro = DBIx::Oro->new(
+    driver   => 'MySQL',
+    database => 'TestDB',
+    user     => 'root',
+    password => 's3cr3t'
+  );
+
+Creates a new SQLite database accessor object with
+C<user> and C<password> information.
+
 
 =head1 SEE ALSO
 
-The MySQL reference can be found at L<https://dev.mysql.com/doc/>.
+The L<MySQL reference|https://dev.mysql.com/doc/>.
 
 
 =head1 DEPENDENCIES
