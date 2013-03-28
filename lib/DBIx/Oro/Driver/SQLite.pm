@@ -10,7 +10,11 @@ use v5.10.1;
 # Todo: use 'truncate' for table deletion
 
 # Defaults to 500 for SQLITE_MAX_COMPOUND_SELECT
-our $MAX_COMP_SELECT => 500;
+our $MAX_COMP_SELECT;
+
+BEGIN {
+  $MAX_COMP_SELECT = 500;
+};
 
 use Carp qw/carp/;
 
