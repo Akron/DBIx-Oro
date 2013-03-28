@@ -217,15 +217,16 @@ In case of array references, it is tested, if the field is an element of the set
 In case of hash references, the keys of the hash represent operators to
 test with (see L<below|/Operators>).
 
-Fields can be column names or functions.
-With a colon you can define aliases of the field names.
+Fields can be column names or SQL functions.
+With a colon you can define aliases of field names,
+like with C<count(field):field_count>.
 
 B<The callback is EXPERIMENTAL and may change without warnings.>
 
 
 =head3 Operators
 
-When checking with hash refs, several operators are supported.
+When checking with hash references, several operators are supported.
 
   my $users = $oro->select(
     Person => {
@@ -241,15 +242,16 @@ When checking with hash refs, several operators are supported.
     }
   );
 
-Supported operators are '<' ('lt'), '>' ('gt'), '=' ('eq'),
-'<=' ('le'), '>=' ('ge'), '!=' ('ne').
+Supported operators are C<E<lt> (lt)>, C<E<gt> (gt)>, C<= (eq)>,
+C<E<lt>= (le)>, C<E<gt>= (ge)>, C<!= (ne)>.
 String comparison operators like C<like> and similar are supported.
-To negate the latter operators you can prepend 'not_'.
-The 'between' and 'not_between' operators are special as they expect
-a two value array as their operand. The single 'not' operator
-accepts an array as a set and is true, if the element is not
+To negate the latter operators you can prepend C<not_>.
+The C<between> and C<not_between> operators are special as they expect
+a two value array reference as their operand. The single C<not> operator
+accepts an array reference as a set and is true, if the value is not
 element of the set.
 To test for existence, use C<value =E<gt> { not =E<gt> undef }>.
+
 Multiple operators for checking with the same column are supported.
 
 B<Operators are EXPERIMENTAL and may change without warnings.>
@@ -258,7 +260,7 @@ B<Operators are EXPERIMENTAL and may change without warnings.>
 =head3 Restrictions
 
 In addition to conditions, the selection can be restricted by using
-special restriction parameters:
+special restriction parameters, all prepended by a C<-> symbol:
 
   my $users = $oro->select(
     Person => {
