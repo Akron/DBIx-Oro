@@ -1980,29 +1980,37 @@ C<-order>
 Sorts the result set by field names.
 Field names can be scalars or array references of field names ordered
 by priority.
-A leading minus of the field name will use descending order,
+A leading minus of the field name will use descending,
 otherwise ascending order.
 
 =item
 
-C<-group>: Groups the result set by field names.
+C<-group>
+
+Groups the result set by field names.
 Especially useful with aggregation operators like C<count()>.
 Field names can be scalars or array references of field names ordered
 by priority.
 In case of an array reference, the final element can be a hash
-reference for a C<having> condition.
+reference, giving a C<having> condition.
 
 =item
 
-C<-limit>: Limits the number of rows in the result set.
+C<-limit>
+
+Limits the number of rows in the result set.
 
 =item
 
-C<-offset>: Sets the offset of the result set.
+C<-offset>
+
+Sets the offset of the result set.
 
 =item
 
-C<-distinct>: Boolean value. If set to a true value, only distinct rows are returned.
+C<-distinct>
+
+Boolean value. If set to a true value, only distinct rows are returned.
 
 =back
 
