@@ -1,3 +1,8 @@
+0.28 2013-03-28
+        - 0.28_1
+	  - Improve documentation.
+	  - Prepare first CPAN release.
+
 0.27 2013-02-13
         - Enable extensions.
 	- Add local $_ to select callbacks.

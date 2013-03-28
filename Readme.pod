@@ -10,7 +10,7 @@ DBIx::Oro - Simple Database Accessor
   use DBIx::Oro;
 
   my $oro = DBIx::Oro->new('file.sqlite');
-  $oro->insert(Person => { name => 'Peter'});
+  $oro->insert(Person => { name => 'Peter' });
   my $john = $oro->load(Person => { id => 4 });
 
   my $person = $oro->table('Person');
@@ -20,13 +20,13 @@ DBIx::Oro - Simple Database Accessor
 =head1 DESCRIPTION
 
 L<DBIx::Oro> is a database accessor that provides
-basic functionalities to work with simple databases, especially
-in a web environment.
+basic functionalities to work with simple relational databases,
+especially in a web environment.
 
 Its aim is not to be a complete abstract replacement
 for SQL communication with DBI, but to make common tasks easier.
 For now it's focused on SQLite - but first steps to make it less
-dependent on SQLite is done. It should be fork- and thread-safe.
+dependent on SQLite are done. It should be fork- and thread-safe.
 
 See L<Driver::SQLite|DBIx::Oro::Driver::SQLite>
 and L<Driver::MySQL|DBIx::Oro::Driver::MySQL>
@@ -51,14 +51,14 @@ The DBI database handle.
 
   print $oro->driver;
 
-The driver (e.g., 'SQLite' or 'MySQL') of the Oro instance.
+The driver (e.g., C<SQLite> or C<MySQL>) of the Oro instance.
 
 
 =head2 last_insert_id
 
   my $id = $oro->last_insert_id;
 
-Returns the globally last inserted id regarding the database connection.
+The globally last inserted id regarding the database connection.
 
 
 =head2 last_sql
@@ -67,12 +67,13 @@ Returns the globally last inserted id regarding the database connection.
   my ($sql, $from_cache) = $oro->last_sql;
 
 The last executed SQL command.
-In array context it returns the last executed SQL command
-of the handle and a false value in case of a real database request.
-If the last result was returned by a cache, the value is true.
 
-This is for debugging purposes only - the returned SQL may not be
-valid due to reformating.
+In array context this will also return a value indicating
+if the request was a real database request.
+If the last result was returned by a cache, the value is true, otherwise false.
+
+B<Note> This is for debugging purposes only - the returned SQL may not be
+valid due to reformatting.
 
 B<The array return is EXPERIMENTAL and may change without warnings.>
 
@@ -98,15 +99,19 @@ B<The array return is EXPERIMENTAL and may change without warnings.>
   );
 
 Creates a new Oro database handle.
-If only a string value is given, this will default to
-a L<DBIx::Oro::Driver::SQLite> object. The database will
-be connected based on the given filename or in memory,
-if the filename is ':memory:'.
-If the database file does not already exist, it is created.
 
-Accepts an optional callback that is only released, if
-the database is newly created. The first parameter of
-the callback function is the Oro-object.
+Accepts a C<driver> attribute (supported are currently
+C<SQLite> and C<MySQL>) all attributes
+accepted by this specific driver.
+
+If only a string value is given, this will be treated as
+a filename of a L<DBIx::Oro::Driver::SQLite> object.
+If the filename is C<:memory:>, this will be an in-memory SQLite database.
+If the database file does not already exist, it is created.
+An additional callback function may be passed, that serves
+as the C<init> attribute of the SQLite Driver's L<new|DBIx::Oro::Driver::SQLite/new>.
+
+B<The class name of the return object may change without warnings!>
 
 
 =head2 insert
@@ -121,10 +126,10 @@ the callback function is the Oro-object.
   );
 
 Inserts a new row to a given table for single insertions.
-Expects the table name and a hash ref of values to insert.
 
+Expects the table name and a hash reference of values to insert.
 For multiple insertions, it expects the table name
-to insert, an arrayref of the column names and an arbitrary
+to insert, an array reference of the column names and an arbitrary
 long array of array references of values to insert.
 
   $oro->insert(Person =>
@@ -132,10 +137,10 @@ long array of array references of values to insert.
       map { [$_] } qw/Peter Sabine Frank/
   );
 
-For multiple insertions with defaults, the arrayref for column
-names can contain array references with a column name and the
-default value. This value is inserted for each inserted entry
-and is especially useful for n:m relation tables.
+For multiple insertions with defaults, the array reference for column
+names can contain array references itself with a column name followed by
+the default value. This value is inserted for each inserted entry
+and is especially useful for C<n:m> relation tables.
 
 
 =head2 update
@@ -143,10 +148,12 @@ and is especially useful for n:m relation tables.
   my $rows = $oro->update(Person => { name => 'Daniel' }, { id => 4 });
 
 Updates values of an existing row of a given table.
-Expects the table name to update, a hash ref of values to update,
-and optionally a hash ref with conditions, the rows have to fulfill.
-In case of scalar values, identity is tested. In case of array refs,
+
+Expects the table name to update, a hash reference of values to update,
+and optionally a hash reference with conditions, the rows have to fulfill.
+In case of scalar values, identity is tested. In case of array references,
 it is tested, if the field is an element of the set.
+
 Returns the number of rows affected.
 
 
@@ -156,11 +163,13 @@ Returns the number of rows affected.
 
 Updates values of an existing row of a given table,
 otherwise inserts them (so called I<upsert>).
-Expects the table name to update or insert, a hash ref of
-values to update or insert, and optionally a hash ref with conditions,
+
+Expects the table name to update or insert, a hash reference of
+values to update or insert, and optionally a hash reference with conditions,
 the rows have to fulfill.
-In case of scalar values, identity is tested. In case of array refs,
+In case of scalar values, identity is tested. In case of array references,
 it is tested, if the field is an element of the set.
+
 Scalar condition values will be inserted, if the fields do not exist.
 
 
@@ -192,19 +201,24 @@ Scalar condition values will be inserted, if the fields do not exist.
     });
 
 
-Returns an array ref of hash refs of a given table,
-that meets a given condition or releases a callback in this case.
-Expects the table name of selection and optionally an array ref
-of fields, optionally a hash ref with conditions and restrictions,
-the rows have to fulfill, and optionally a callback,
-which is released after each row.
+Returns an array reference of rows as hash references of a given table,
+that meet a given condition.
+
+Expects the table name of the selection and optionally an array reference
+of fields, optionally a hash reference with conditions and restrictions
+all rows have to fulfill, and optionally a callback,
+which is released after each row, passing the row as a hash reference.
+
+If a callback is given, the method has no return value.
 If the callback returns -1, the data fetching is aborted.
+
 In case of scalar values, identity is tested for the condition.
-In case of array refs, it is tested, if the field is an element of the set.
-In case of hash refs, the keys of the hash represent operators to
-test with (see below).
+In case of array references, it is tested, if the field is an element of the set.
+In case of hash references, the keys of the hash represent operators to
+test with (see L<below|/Operators>).
+
 Fields can be column names or functions.
-With a colon you can define aliases for the field names.
+With a colon you can define aliases of the field names.
 
 B<The callback is EXPERIMENTAL and may change without warnings.>
 

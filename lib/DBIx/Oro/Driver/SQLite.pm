@@ -900,7 +900,10 @@ Creates a new SQLite database accessor object on the
 given filename or in memory, if the filename is ':memory:'.
 If the database file does not already exist, it is created.
 If the file is the empty string, a temporary database
-is created.
+is created. A callback function call C<init> will be triggered,
+if the database was newly created.
+The first parameter of the callback function is the Oro object.
+
 See L<DBIx::Oro::new> for further information.
 
 
