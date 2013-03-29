@@ -29,8 +29,6 @@ unless ($suite) {
 # Start test
 use_ok 'DBIx::Oro';
 
-
-
 # DBIx::Oro::Driver::SQLite
 # Create an SQLite Oro object
 my $oro = DBIx::Oro->new('file.sqlite');
@@ -75,5 +73,90 @@ my $birthday =
 	       });
 
 is($birthday->{snippet}, 'My <strong>Birthday</strong>', 'String correct');
+
+
+# Main synopsis
+
+# Create new object
+my $oro2 = DBIx::Oro->new(
+
+  # Create an SQLite in-memory DB and initialize
+  ':memory:' => sub {
+
+    # Initialize tables with direct SQL
+    $_->do(
+      'CREATE TABLE User (
+         id    INTEGER PRIMARY KEY,
+         name  TEXT,
+         age   TEXT
+      )'
+    ) or return -1;
+  }
+);
+
+# Execute SQL directly
+$oro2->do(
+  'CREATE TABLE Post (
+     time     INTEGER,
+     msg      TEXT,
+     user_id  INTEGER
+  )');
+
+# Wrap multiple actions in a transaction
+$oro2->txn(
+  sub {
+
+    # Insert a user
+    $_->insert(User => {
+      name => 'Akron',
+      age  => '20'
+    }) or return -1;
+
+    # Get latest inserted id
+    my $user_id = $_->last_insert_id;
+
+    # Bulk insert messages with default values
+    $_->insert(Post => [
+      [ time => time ],
+      [ user_id => $user_id ],
+      'msg'] => (
+	['Hello World!'],
+	['Seems to work!'],
+	['I can insert bulk messages ...'],
+	['And I can stop.']
+      )
+    ) or return -1;
+  });
+
+# Load a user based on the name
+is($oro2->load(User => { name => 'Akron' })->{age}, 20, 'Age');
+
+# Count the number of entries on a table
+is($oro2->count('Post'), 4, 'Postcount');
+
+# Select some messages
+my $msgs = $oro2->select(Post => ['msg'] => { msg => { like => '%wo%' } });
+
+foreach (@$msgs) {
+  ok($_->{msg}."\n", 'Message');
+};
+# Hello World!
+# Seems to work!
+
+# Create a joined table object
+my $join = $oro2->table([
+  User => ['name'] => { id => 1 },
+  Post => ['msg'] => { user_id => 1 }
+]);
+
+# Select on joined tables
+$join->select({ name => 'Akron', msg => { not_glob => 'And*'}, -limit => 2 } => sub {
+		ok($_->{name}. ': '. $_->{msg}. "\n", 'Messages');
+});
+# Akron: Hello World!
+# Akron: I can insert bulk messages ...
+
+# Debug
+is($join->last_sql, 'SELECT User.name AS `name`, Post.msg AS `msg` FROM User, Post WHERE User.id = Post.user_id AND Post.msg NOT GLOB ? AND User.name = ? LIMIT ?', 'Last SQL');
 
 done_testing;

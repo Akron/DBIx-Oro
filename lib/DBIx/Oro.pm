@@ -6,6 +6,7 @@ our $VERSION = '0.28_1';
 
 # See the bottom of this file for the POD documentation.
 
+# Todo: Improve documentation
 # Todo: -prefix is not documented!
 # Todo: Put 'created' in SQLite driver
 #       implement ->errstr
@@ -1708,12 +1709,103 @@ DBIx::Oro - Simple Database Accessor
 
   use DBIx::Oro;
 
-  my $oro = DBIx::Oro->new('file.sqlite');
-  $oro->insert(Person => { name => 'Peter' });
-  my $john = $oro->load(Person => { id => 4 });
+  # Create new object
+  my $oro = DBIx::Oro->new(
 
-  my $person = $oro->table('Person');
-  my $peters = $person->select({ name => 'Peter' });
+    # Create an SQLite in-memory DB and initialize
+    ':memory:' => sub {
+
+      # Initialize tables with direct SQL
+      $_->do(
+        'CREATE TABLE User (
+           id    INTEGER PRIMARY KEY,
+           name  TEXT,
+           age   TEXT
+        )'
+      ) or return -1;
+    }
+  );
+
+  # Execute SQL directly
+  $oro->do(
+    'CREATE TABLE Post (
+       time     INTEGER,
+       msg      TEXT,
+       user_id  INTEGER
+    )'
+  );
+
+  # Wrap multiple actions in transactions
+  $oro->txn(
+    sub {
+
+      # Insert simple data
+      my $rv = $_->insert(User => {
+        name => 'Akron',
+        age  => '20'
+      });
+
+      # Easily rollback transaction
+      return -1 unless $rv;
+
+      # Get latest inserted id
+      my $user_id = $_->last_insert_id;
+
+      # Bulk insert data with default values
+      $_->insert(Post => [
+        [ time => time ],
+        [ user_id => $user_id ],
+        'msg'] => (
+          ['Hello World!'],
+	  ['Seems to work!'],
+	  ['I can insert bulk messages ...'],
+	  ['And I can stop.']
+        )
+      ) or return -1;
+  });
+
+  # Load a dataset based on a unique condition
+  my $user = $oro->load(User => { name => 'Akron' });
+
+  print $user->{age}; # '20'
+
+  # Count the number of entries on a table
+  print $oro->count('Post'); # '4'
+
+  # Select multiple datasets based on conditions
+  my $msgs = $oro->select(Post => ['msg'] => {
+    msg => { like => '%wo%' }
+  });
+
+  # Results are simple datastructures
+  print $_->{msg} . "\n" foreach @$msgs;
+  # 'Hello World!'
+  # 'Seems to work!'
+
+  # Create joined tables
+  my $join = $oro2->table([
+    User => ['name'] => { id => 1 },
+    Post => ['msg']  => { user_id => 1 }
+  ]);
+
+  # Select on joined tables and send data to a callback
+  $join->select({
+      name   => 'Akron',
+      msg    => { not_glob => 'And*' },
+      -limit => 2
+    } => sub {
+      print $_->{name}, ': ', $_->{msg}, "\n";
+    });
+  # Akron: Hello World!
+  # Akron: I can insert bulk messages ...
+
+  # Investigate generated SQL data for debugging
+  print $join->last_sql;
+
+  # 'SELECT User.name AS `name`, Post.msg AS `msg`
+  # FROM User, Post WHERE User.id = Post.user_id
+  # AND Post.msg NOT GLOB ? AND User.name = ?
+  # LIMIT ?'
 
 
 =head1 DESCRIPTION
@@ -1808,7 +1900,8 @@ a filename of a L<DBIx::Oro::Driver::SQLite> object.
 If the filename is C<:memory:>, this will be an in-memory SQLite database.
 If the database file does not already exist, it is created.
 An additional callback function may be passed, that serves
-as the C<init> attribute of the SQLite Driver's L<new|DBIx::Oro::Driver::SQLite/new>.
+as the C<init> attribute of the SQLite
+Driver's L<new|DBIx::Oro::Driver::SQLite/new>.
 
 B<The class name of the return object may change without warnings!>
 

@@ -107,7 +107,10 @@ sub _init {
 	  };
 
 	  # Release callback
-	  return $cb->($self) if $cb;
+	  if ($cb) {
+	    local $_ = $self;
+	    return $cb->($self);
+	  };
 	  return 1;
 	})
     ) {
@@ -913,8 +916,9 @@ Creates a new SQLite database accessor object on the
 given filename or in memory, if the filename is C<:memory:>.
 If the database file does not already exist, it is created.
 If the file is the empty string, a temporary database
-is created. A callback function call C<init> will be triggered,
-if the database was newly created.
+is created. A callback function called C<init> will be triggered,
+if the database was newly created. This callback is wrapped inside
+a transaction.
 The first parameter of the callback function is the Oro object.
 
 See L<new in DBIx::Oro|DBIx::Oro/new> for further information.
