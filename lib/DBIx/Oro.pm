@@ -1702,7 +1702,7 @@ __END__
 
 =head1 NAME
 
-DBIx::Oro - Simple Database Accessor
+DBIx::Oro - Simple Relational Database Accessor
 
 
 =head1 SYNOPSIS

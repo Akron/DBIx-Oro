@@ -1,6 +1,7 @@
 0.28 2013-03-28
         - 0.28_1
 	  - Improve documentation.
+	  - Add SQLite tests to the suite.
 	  - Prepare first CPAN release.
 
 0.27 2013-02-13
