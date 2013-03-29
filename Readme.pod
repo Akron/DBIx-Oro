@@ -2,19 +2,110 @@
 
 =head1 NAME
 
-DBIx::Oro - Simple Database Accessor
+DBIx::Oro - Simple Relational Database Accessor
 
 
 =head1 SYNOPSIS
 
   use DBIx::Oro;
 
-  my $oro = DBIx::Oro->new('file.sqlite');
-  $oro->insert(Person => { name => 'Peter' });
-  my $john = $oro->load(Person => { id => 4 });
+  # Create new object
+  my $oro = DBIx::Oro->new(
 
-  my $person = $oro->table('Person');
-  my $peters = $person->select({ name => 'Peter' });
+    # Create an SQLite in-memory DB and initialize
+    ':memory:' => sub {
+
+      # Initialize tables with direct SQL
+      $_->do(
+        'CREATE TABLE User (
+           id    INTEGER PRIMARY KEY,
+           name  TEXT,
+           age   TEXT
+        )'
+      ) or return -1;
+    }
+  );
+
+  # Execute SQL directly
+  $oro->do(
+    'CREATE TABLE Post (
+       time     INTEGER,
+       msg      TEXT,
+       user_id  INTEGER
+    )'
+  );
+
+  # Wrap multiple actions in transactions
+  $oro->txn(
+    sub {
+
+      # Insert simple data
+      my $rv = $_->insert(User => {
+        name => 'Akron',
+        age  => '20'
+      });
+
+      # Easily rollback transaction
+      return -1 unless $rv;
+
+      # Get latest inserted id
+      my $user_id = $_->last_insert_id;
+
+      # Bulk insert data with default values
+      $_->insert(Post => [
+        [ time => time ],
+        [ user_id => $user_id ],
+        'msg'] => (
+          ['Hello World!'],
+	  ['Seems to work!'],
+	  ['I can insert bulk messages ...'],
+	  ['And I can stop.']
+        )
+      ) or return -1;
+  });
+
+  # Load a dataset based on a unique condition
+  my $user = $oro->load(User => { name => 'Akron' });
+
+  print $user->{age}; # '20'
+
+  # Count the number of entries on a table
+  print $oro->count('Post'); # '4'
+
+  # Select multiple datasets based on conditions
+  my $msgs = $oro->select(Post => ['msg'] => {
+    msg => { like => '%wo%' }
+  });
+
+  # Results are simple datastructures
+  print $_->{msg} . "\n" foreach @$msgs;
+  # 'Hello World!'
+  # 'Seems to work!'
+
+  # Create joined tables
+  my $join = $oro2->table([
+    User => ['name'] => { id => 1 },
+    Post => ['msg']  => { user_id => 1 }
+  ]);
+
+  # Select on joined tables and send data to a callback
+  $join->select({
+      name   => 'Akron',
+      msg    => { not_glob => 'And*' },
+      -limit => 2
+    } => sub {
+      print $_->{name}, ': ', $_->{msg}, "\n";
+    });
+  # Akron: Hello World!
+  # Akron: I can insert bulk messages ...
+
+  # Investigate generated SQL data for debugging
+  print $join->last_sql;
+
+  # 'SELECT User.name AS `name`, Post.msg AS `msg`
+  # FROM User, Post WHERE User.id = Post.user_id
+  # AND Post.msg NOT GLOB ? AND User.name = ?
+  # LIMIT ?'
 
 
 =head1 DESCRIPTION
@@ -109,7 +200,8 @@ a filename of a L<DBIx::Oro::Driver::SQLite> object.
 If the filename is C<:memory:>, this will be an in-memory SQLite database.
 If the database file does not already exist, it is created.
 An additional callback function may be passed, that serves
-as the C<init> attribute of the SQLite Driver's L<new|DBIx::Oro::Driver::SQLite/new>.
+as the C<init> attribute of the SQLite
+Driver's L<new|DBIx::Oro::Driver::SQLite/new>.
 
 B<The class name of the return object may change without warnings!>
 
@@ -152,7 +244,7 @@ Updates values of an existing row of a given table.
 Expects the table name to update, a hash reference of values to update,
 and optionally a hash reference with conditions, the rows have to fulfill.
 In case of scalar values, identity is tested. In case of array references,
-it is tested, if the field is an element of the set.
+it is tested, if the field value is an element of the set.
 
 Returns the number of rows affected.
 
@@ -168,7 +260,7 @@ Expects the table name to update or insert, a hash reference of
 values to update or insert, and optionally a hash reference with conditions,
 the rows have to fulfill.
 In case of scalar values, identity is tested. In case of array references,
-it is tested, if the field is an element of the set.
+it is tested, if the field value is an element of the set.
 
 Scalar condition values will be inserted, if the fields do not exist.
 
@@ -213,7 +305,7 @@ If a callback is given, the method has no return value.
 If the callback returns -1, the data fetching is aborted.
 
 In case of scalar values, identity is tested for the condition.
-In case of array references, it is tested, if the field is an element of the set.
+In case of array references, it is tested, if the field value is an element of the set.
 In case of hash references, the keys of the hash represent operators to
 test with (see L<below|/Operators>).
 
@@ -331,24 +423,24 @@ use any number of tables and perform a simple equi-join:
     }
   );
 
-Join-Selects accept an array reference with a sequences of
-table names, optional field array refs and optional hash refs
+Join-Selects accept an array reference with a sequence of
+table names, optional field array references and optional hash references
 containing numerical markers for the join.
-If the field array ref does not exists, all columns of the
-table are selected. If the array ref is empty, no columns of the
+If the field array reference is not given, all columns of the
+table are selected. If the array reference is empty, no columns of the
 table are selected.
 
 With a colon you can define aliases for the field names.
-The join marker hash ref has field names as keys
-and numerical markers or array refs of numerical markers as values.
+
+The join marker hash reference has field names as keys
+and numerical markers or array references including numerical markers as values.
 Fields with identical markers greater or equal than C<0> will have
 identical content, fields with identical markers littler than C<0>
-are not allowed to be identical.
+will have different content.
 
-A following array reference of fields is not allowed.
-After the join table array ref, the optional hash
-ref with conditions and restrictions and an optional
-callback have to follow immediately.
+After the join table array reference, the optional hash
+reference with conditions and restrictions and an optional
+callback may follow.
 
 B<Joins are EXPERIMENTAL and may change without warnings.>
 
@@ -357,25 +449,28 @@ B<Joins are EXPERIMENTAL and may change without warnings.>
 
 Sometimes field functions and returned values shall be treated
 in a special way.
-By handing over subroutines, C<select> as well as C<load> allow
+By handing over subroutines, L<select|/select> as well as L<load|/load> allow
 for these treatments.
+
 
   my $name = sub {
     return ('name', sub { uc $_[0] });
   };
   $oro->select(Person => ['age', [ $name => 'name'] ]);
 
-This example returns all values in the 'name' column in uppercase.
-Treatments are array refs in the field array, with the first
-element being a treatment subroutine ref and the second element
+
+This example returns all values in the C<name> column in uppercase.
+Treatments are array references in the field array, with the first
+element being a treatment subroutine reference and the second element
 being the alias of the column.
 
 The treatment subroutine returns a field value (an SQL string),
 optionally an anonymous subroutine that is executed after each
 returned value, and optionally an array of values to pass to the inner
-subroutine. The first parameter the inner subroutine has to handle,
+subroutine.
+The first parameter the inner subroutine has to handle
 is the value to treat, following the optional treatment parameters.
-The treatment returns the treated value (that does not has to be a string).
+The treatment returns the treated value (that does not have to be a string).
 
 Outer subroutines are executed as long as the first value is not a string
 value. The only parameter passed to the outer subroutine is the
@@ -383,7 +478,7 @@ current table name.
 
 See the L<SQLite Driver|DBIx::Oro::Driver::SQLite> for examples of treatments.
 
-B<Treatments are heavily EXPERIMENTAL and may change without warnings.>
+B<Treatments are HEAVILY EXPERIMENTAL and may change without warnings.>
 
 
 =head3 Caching
@@ -406,7 +501,7 @@ B<Treatments are heavily EXPERIMENTAL and may change without warnings.>
   );
 
 Selected results can be directly cached by using the C<-cache>
-keyword. It accepts a hash ref with the parameter C<chi>
+keyword. It accepts a hash reference with the parameter C<chi>
 containing the cache object and C<key> containing the key
 for caching. If no key is given, the SQL statement is used
 as the key. All other parameters are transferred to the C<set>
@@ -425,15 +520,17 @@ B<Caching is EXPERIMENTAL and may change without warnings.>
   my $user  = $oro->load(Person, ['name'], { id => 4 });
   my $count = $oro->load(Person, ['count(*):persons']);
 
-Returns a single hash ref of a given table,
+Returns a single hash reference of a given table,
 that meets a given condition.
-Expects the table name of selection, an optional array ref of fields
-to return and a hash ref with conditions, the rows have to fulfill.
-Normally this includes the primary key.
-Restrictions as well as the caching systems can be applied as with
-L<select>.
+
+Expects the table name of selection, an optional array reference of fields
+to return and a hash reference with conditions, the rows have to fulfill.
+Normally this will include the primary key.
+Restrictions as well as the caching system can be applied as with
+L<select|/select>.
 In case of scalar values, identity is tested.
-In case of array refs, it is tested, if the field is an element of the set.
+In case of array references, it is tested, if the field value is an
+element of the set.
 Fields can be column names or functions. With a colon you can define
 aliases for the field names.
 
@@ -444,9 +541,10 @@ aliases for the field names.
   my $pauls   = $oro->count('Person' => { name => 'Paul' });
 
 Returns the number of rows of a table.
-Expects the table name and a hash ref with conditions,
+
+Expects the table name and a hash reference with conditions,
 the rows have to fulfill.
-Caching can be applied as with L<select>.
+Caching can be applied as with L<select|/select>.
 
 
 =head2 delete
@@ -454,11 +552,14 @@ Caching can be applied as with L<select>.
   my $rows = $oro->delete(Person => { id => 4 });
 
 Deletes rows of a given table, that meet a given condition.
-Expects the table name of selection and optionally a hash ref
+
+Expects the table name of selection and optionally a hash reference
 with conditions and restrictions, the rows have to fulfill.
 In case of scalar values, identity is tested for the condition.
-In case of array refs, it is tested, if the field is an element of the set.
-Restrictions can be applied as with L<select>.
+In case of array references, it is tested, if the field value is an
+element of the set.
+Restrictions can be applied as with L<select|/select>.
+
 Returns the number of rows that were deleted.
 
 
@@ -483,11 +584,13 @@ Returns the number of rows that were deleted.
   $books->select({ author => 'Akron' });
   print $books->count;
 
-Returns a new C<DBIx::Oro> object with a predefined table
-or joined tables. Allows to omit the first table argument for the methods
-L<select>, L<load>, L<count> and - in case of non-joined-tables -
-for L<insert>, L<update>, L<merge>, and L<delete>.
-C<table> in conjunction with a joined table can be seen as an "ad hoc view".
+Returns a new Oro object with a predefined table or joined tables.
+
+Allows to omit the first table argument for the methods
+L<select|/select>, L<load|/load>, L<count|/count> and - in case of non-joined-tables -
+for L<insert|/insert>, L<update|/update>, L<merge|/merge>, and L<delete|/delete>.
+
+In conjunction with a joined table this can be seen as an I<ad hoc view>.
 
 B<This method is EXPERIMENTAL and may change without warnings.>
 
@@ -507,7 +610,8 @@ B<This method is EXPERIMENTAL and may change without warnings.>
         }) or return -1;
     });
 
-Allows to wrap transactions.
+Wrap transactions.
+
 Expects an anonymous subroutine containing all actions.
 If the subroutine returns -1, the transactional data will be omitted.
 Otherwise the actions will be released.
@@ -524,8 +628,9 @@ on the driver).
         name TEXT NOT NULL,
      )');
 
-Executes SQL code.
-This is a wrapper for the DBI C<do()> method (but fork- and thread-safe).
+Executes direct SQL code.
+
+This is a wrapper for the L<do|DBI/do> method of DBI (but fork- and thread-safe).
 
 
 =head2 explain
@@ -581,14 +686,17 @@ statement should be cached by L<DBI>.
     print 'Event newly established!';
   };
 
-Add a callback for execution in case of newly established
+Attaches a callback for execution in case of newly established
 database connections.
-The first argument to the anonymous subroutine is the Oro object,
+
+The first argument passed to the anonymous subroutine is the Oro object,
 the second one is the newly established database connection.
 Prepending a string with a name will prevent from adding an
 event multiple times - adding the event again will be ignored.
+
 Returns a true value in case the event is newly established,
 otherwise false.
+
 Events will be emitted in an unparticular order.
 
 B<This event is EXPERIMENTAL and may change without warnings.>
