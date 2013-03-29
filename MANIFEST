@@ -14,6 +14,7 @@ t/10-Treatment.t
 t/11-Explain.t
 t/12-Cache.t
 t/13-Fields.t
+t/14-Synopsis.t
 t/666-Bobby-Tables.t
 t/DBTestSuite.pm
 Changes
