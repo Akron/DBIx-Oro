@@ -33,7 +33,7 @@ use_ok 'DBIx::Oro';
 
 # DBIx::Oro::Driver::SQLite
 # Create an SQLite Oro object
-my $oro = DBIx::Oro->new('file.sqlite');
+my $oro = DBIx::Oro->new('');
 
 # Attach new databases
 $oro->attach(blog => ':memory:');
