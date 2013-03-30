@@ -164,6 +164,8 @@ sub drop {
   my $self = shift;
   my $oro = $self->oro;
 
+  return unless $oro;
+
   if ($self->driver eq 'SQLite') {
     $oro->do('PRAGMA foreign_keys = OFF') or return;
   };

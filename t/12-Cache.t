@@ -30,7 +30,7 @@ unless ($suite) {
 if ( eval 'use CHI; 1;') {
   plan tests => 58;
 } else {
-  plan skip_all => "Not fully implemented yet.";
+  plan skip_all => "No CHI module found";
 };
 
 use_ok 'DBIx::Oro';
