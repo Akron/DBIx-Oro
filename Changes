@@ -1,4 +1,4 @@
-0.28 2013-03-30
+0.28 2013-03-31
         - 0.28_1
 	  - Improve documentation.
 	  - Add SQLite tests to the suite.
@@ -7,6 +7,9 @@
 	- 0.28_2
 	  - Fixed small bug in test suite for
 	    CHI free environments.
+	- 0.28_3
+	  - Fixed small bug in test suite for
+	    CHI free environments (2).
 
 0.27 2013-02-13
         - Enable extensions.

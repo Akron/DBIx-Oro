@@ -22,15 +22,16 @@ my $suite = DBTestSuite->new($ENV{TEST_DB} || $ARGV[0] || 'SQLite');
 
 # Configuration for this database not found
 unless ($suite) {
-  plan skip_all => 'Database not properly configured';
+  diag 'Database not properly configured';
   exit(0);
 };
 
 # Start test
-if ( eval 'use CHI; 1;') {
-  plan tests => 58;
-} else {
-  plan skip_all => "No CHI module found";
+unless ( eval 'use CHI; 1;') {
+  diag "No CHI module found";
+  pass('CHI not found');
+  done_testing;
+  exit;
 };
 
 use_ok 'DBIx::Oro';
@@ -45,10 +46,6 @@ ok($oro, 'Handle created');
 ok($suite->oro($oro), 'Add to suite');
 
 ok($suite->init(qw/Name Content Book/), 'Init');
-
-END {
-  ok($suite->drop, 'Transaction for Dropping') if $suite;
-};
 
 # ---
 
@@ -291,3 +288,7 @@ is($oro->count(Name => {
 ($last_sql, $last_sql_cache) = $oro->last_sql;
 ok($last_sql_cache, 'From Cache 7');
 is(scalar $chi->get_keys, 5, 'Five keys');
+
+ok($suite->drop, 'Transaction for Dropping') if $suite;
+
+done_testing;
