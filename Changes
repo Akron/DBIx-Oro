@@ -1,4 +1,4 @@
-0.28 2013-04-01
+0.28 2013-04-02
         - 0.28_1
 	  - Improve documentation.
 	  - Add SQLite tests to the suite.
@@ -12,6 +12,8 @@
 	    CHI free environments (2).
 	- 0.28_4
 	  - Circumvent bug (?) in calculations in DBD::SQLite.
+	- 0.28_5
+	  - Fixed hash sorting bug in test suite.
 
 0.27 2013-02-13
         - Enable extensions.

@@ -157,6 +157,12 @@ $join->select({ name => 'Akron', msg => { not_glob => 'And*'}, -limit => 2 } => 
 # Akron: I can insert bulk messages ...
 
 # Debug
-is($join->last_sql, 'SELECT User.name AS `name`, Post.msg AS `msg` FROM User, Post WHERE User.id = Post.user_id AND Post.msg NOT GLOB ? AND User.name = ? LIMIT ?', 'Last SQL');
+my $lsql = $join->last_sql;
+like($lsql, qr{User\.name AS `name`}, 'Last SQL 1');
+like($lsql, qr{Post\.msg AS `msg`}, 'Last SQL 2');
+like($lsql, qr{User\.id = Post\.user_id}, 'Last SQL 3');
+like($lsql, qr{Post\.msg NOT GLOB \?}, 'Last SQL 4');
+like($lsql, qr{User\.name = \?}, 'Last SQL 5');
+like($lsql, qr{LIMIT \?$}, 'Last SQL 6');
 
 done_testing;
