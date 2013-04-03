@@ -4,8 +4,6 @@ use warnings;
 
 plan tests => 93;
 
-$|++;
-
 use lib 'lib', '../lib', '../../lib';
 use_ok 'DBIx::Oro';
 

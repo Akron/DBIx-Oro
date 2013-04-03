@@ -6,8 +6,6 @@ use Data::Dumper;
 use utf8;
 use Math::BigInt;
 
-$|++;
-
 our (@ARGV, %ENV);
 use lib (
   't',

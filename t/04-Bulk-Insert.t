@@ -4,8 +4,6 @@ use warnings;
 use Test::More;
 use Data::Dumper;
 
-$|++;
-
 our (@ARGV, %ENV);
 use lib (
   't',

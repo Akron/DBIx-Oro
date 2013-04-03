@@ -5,8 +5,6 @@ use Test::More;
 use Data::Dumper;
 use utf8;
 
-$|++;
-
 our (@ARGV, %ENV);
 use lib (
   't',

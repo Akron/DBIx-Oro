@@ -6,8 +6,6 @@ use Test::More tests => 67;
 use Data::Dumper;
 use File::Temp qw/:POSIX/;
 
-$|++;
-
 our (@ARGV, %ENV);
 use lib (
   't',

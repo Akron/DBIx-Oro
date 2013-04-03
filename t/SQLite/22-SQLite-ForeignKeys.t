@@ -3,8 +3,6 @@ use warnings;
 use Test::More tests => 30;
 use utf8;
 
-$|++;
-
 use lib 'lib', '../lib', '../../lib';
 use_ok 'DBIx::Oro';
 
