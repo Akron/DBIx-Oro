@@ -26,6 +26,8 @@ our $VERSION = '0.28_6';
 # Todo: To change queries from different drivers,
 #       use events.
 # Todo: Return key -column_order => [] with fetchall_arrayref.
+# Todo: my $value = $oro->value(Table => 'Field') # Ähnlich wie count
+# Todo: Oder my ($value) = $oro->value(Table => Field => { -limit => 1 }) # und es gibt ein Array zurück
 
 use v5.10.1;
 
