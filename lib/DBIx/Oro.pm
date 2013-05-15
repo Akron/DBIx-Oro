@@ -1465,6 +1465,7 @@ sub _get_pairs {
 	    };
 
 	  } else {
+	    $val //= '?';
 	    carp "Unknown Oro operator $key $op $val" and next;
 	  }
 	}
