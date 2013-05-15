@@ -16,6 +16,8 @@
 	  - Fixed hash sorting bug in test suite.
 	- 0.28_6
 	  - Improved test suite.
+	- 0.28_7
+	  - Added escaped SQL for pairs.
 
 0.27 2013-02-13
         - Enable extensions.

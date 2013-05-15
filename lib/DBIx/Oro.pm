@@ -2,7 +2,7 @@ package DBIx::Oro;
 use strict;
 use warnings;
 
-our $VERSION = '0.28_6';
+our $VERSION = '0.28_7';
 
 # See the bottom of this file for the POD documentation.
 
@@ -28,8 +28,6 @@ our $VERSION = '0.28_6';
 # Todo: Return key -column_order => [] with fetchall_arrayref.
 # Todo: my $value = $oro->value(Table => 'Field') # Ähnlich wie count
 # Todo: Oder my ($value) = $oro->value(Table => Field => { -limit => 1 }) # und es gibt ein Array zurück
-
-# Support _sql() as a string function or \"SELECT FOR ..." for SQL that is not escaped.
 
 use v5.10.1;
 
@@ -1985,7 +1983,8 @@ Scalar condition values will be inserted, if the fields do not exist.
   $users = $oro->select(Person =>
     ['id'] => {
       age  => 24,
-      name => ['Daniel', 'Sabine']
+      name => ['Daniel', 'Sabine'],
+      rights => \"SELECT right FROM Rights WHERE right = 3"
     });
   $users = $oro->select(Person => ['name:displayName']);
 
@@ -2019,6 +2018,7 @@ If the callback returns -1, the data fetching is aborted.
 
 In case of scalar values, identity is tested for the condition.
 In case of array references, it is tested, if the field value is an element of the set.
+In case of scalar references, the SQL string is taken directly.
 In case of hash references, the keys of the hash represent operators to
 test with (see L<below|/Operators>).
 
