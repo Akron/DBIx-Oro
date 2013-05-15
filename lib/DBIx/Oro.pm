@@ -1396,8 +1396,16 @@ sub _get_pairs {
 	}
       }
 
-      # Element of
+      # Element of or SQL
       elsif (ref $value eq 'ARRAY') {
+
+	# Escaped SQL
+	if (ref $value->[0] && ref $value->[0] eq 'SCALAR') {
+	  push(@pairs, "$key = (" . ${$value->[0]} . ')'),
+	    push(@values, @{$value}[ 1 .. $#$value ]);
+	  next;
+	};
+
 	# Undefined values in the array are not specified
 	# as ' IN (NULL, ...)' does not work
 	push (@pairs, "$key IN (" . _q($value) . ')' ),
@@ -1476,7 +1484,7 @@ sub _get_pairs {
 
       # Escaped SQL
       elsif (ref $value eq 'SCALAR') {
-	push(@pairs, "$key = ($value)"),
+	push(@pairs, "$key = ($$value)"),
       }
 
       # Stringifiable object
@@ -1982,9 +1990,9 @@ Scalar condition values will be inserted, if the fields do not exist.
   $users = $oro->select(Person => ['id', 'name']);
   $users = $oro->select(Person =>
     ['id'] => {
-      age  => 24,
-      name => ['Daniel', 'Sabine'],
-      rights => \"SELECT right FROM Rights WHERE right = 3"
+      age    => 24,
+      name   => ['Daniel', 'Sabine'],
+      rights => [\"SELECT right FROM Rights WHERE right = ?", 2]
     });
   $users = $oro->select(Person => ['name:displayName']);
 
@@ -2017,8 +2025,10 @@ If a callback is given, the method has no return value.
 If the callback returns -1, the data fetching is aborted.
 
 In case of scalar values, identity is tested for the condition.
-In case of array references, it is tested, if the field value is an element of the set.
-In case of scalar references, the SQL string is taken directly.
+In case of array references, it is tested, if the field value is an element of the set or,
+if the first element is a scalar reference, the string is taken as SQL directly and all
+following elements are parameters.
+In case of scalar references, the string is taken as SQL directly.
 In case of hash references, the keys of the hash represent operators to
 test with (see L<below|/Operators>).
 
