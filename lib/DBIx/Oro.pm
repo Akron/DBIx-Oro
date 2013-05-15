@@ -29,6 +29,8 @@ our $VERSION = '0.28_6';
 # Todo: my $value = $oro->value(Table => 'Field') # Ähnlich wie count
 # Todo: Oder my ($value) = $oro->value(Table => Field => { -limit => 1 }) # und es gibt ein Array zurück
 
+# Support _sql() as a string function or \"SELECT FOR ..." for SQL that is not escaped.
+
 use v5.10.1;
 
 use Scalar::Util qw/blessed/;
@@ -1464,11 +1466,19 @@ sub _get_pairs {
 	      push(@pairs, $p);
 	    };
 
-	  } else {
+	  }
+
+	  # Unknown operator
+	  else {
 	    $val //= '?';
 	    carp "Unknown Oro operator $key $op $val" and next;
 	  }
 	}
+      }
+
+      # Escaped SQL
+      elsif (ref $value eq 'SCALAR') {
+	push(@pairs, "$key = ($value)"),
       }
 
       # Stringifiable object
