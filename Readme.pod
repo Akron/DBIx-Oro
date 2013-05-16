@@ -163,7 +163,7 @@ In array context this will also return a value indicating
 if the request was a real database request.
 If the last result was returned by a cache, the value is true, otherwise false.
 
-B<Note> This is for debugging purposes only - the returned SQL may not be
+B<Note:> This is for debugging purposes only - the returned SQL may not be
 valid due to reformatting.
 
 B<The array return is EXPERIMENTAL and may change without warnings.>
@@ -211,7 +211,9 @@ B<The class name of the return object may change without warnings!>
   $oro->insert(Person => {
     id   => 4,
     name => 'Peter',
-    age  => 24
+    age  => 24,
+    address => \"SELECT address FROM Address where id = 4",
+    country => [\"SELECT country FROM County where id = ?", 3]
   });
   $oro->insert(Person =>
     ['id', 'name'] => [4, 'Peter'], [5, 'Sabine']
@@ -220,6 +222,11 @@ B<The class name of the return object may change without warnings!>
 Inserts a new row to a given table for single insertions.
 
 Expects the table name and a hash reference of values to insert.
+In case the values are scalar references, the string is directly used
+as an SQL statement. In case the values are array references and the first
+element is a scalar reference, the string is directly used as an SQL
+statement and the following values are inserted for placeholders.
+
 For multiple insertions, it expects the table name
 to insert, an array reference of the column names and an arbitrary
 long array of array references of values to insert.
@@ -234,6 +241,8 @@ names can contain array references itself with a column name followed by
 the default value. This value is inserted for each inserted entry
 and is especially useful for C<n:m> relation tables.
 
+B<Note:> The treatment of scalar and array references as insertion values
+is EXPERIMENTAL and may change without warnings.
 
 =head2 update
 
@@ -271,8 +280,9 @@ Scalar condition values will be inserted, if the fields do not exist.
   $users = $oro->select(Person => ['id', 'name']);
   $users = $oro->select(Person =>
     ['id'] => {
-      age  => 24,
-      name => ['Daniel', 'Sabine']
+      age    => 24,
+      name   => ['Daniel', 'Sabine'],
+      rights => [\"SELECT right FROM Rights WHERE right = ?", 2]
     });
   $users = $oro->select(Person => ['name:displayName']);
 
@@ -305,7 +315,10 @@ If a callback is given, the method has no return value.
 If the callback returns -1, the data fetching is aborted.
 
 In case of scalar values, identity is tested for the condition.
-In case of array references, it is tested, if the field value is an element of the set.
+In case of array references, it is tested, if the field value is an element of the set or,
+if the first element is a scalar reference, the string is taken as SQL directly and all
+following elements are parameters.
+In case of scalar references, the string is taken as SQL directly.
 In case of hash references, the keys of the hash represent operators to
 test with (see L<below|/Operators>).
 
