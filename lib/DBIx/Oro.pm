@@ -7,6 +7,14 @@ our $VERSION = '0.28_7';
 # See the bottom of this file for the POD documentation.
 
 # Todo: Improve documentation
+#       - =head1 ADVANCED CONCEPTS
+#         - Joined tables
+#         - Treatments
+#         - Caching
+#         - Injected SQL
+#         - explain
+#         - on_connect
+
 # Todo: -prefix is not documented!
 # Todo: Put 'created' in SQLite driver
 #       implement ->errstr
