@@ -276,9 +276,10 @@ sub insert {
     # Create insert arrays
     my (@keys, @values);
     while (my ($key, $value) = each %param) {
-      next unless $key =~ /^[_\.0-9a-zA-Z]+$/;
-      push(@keys,   $key);
-      push(@values, $value);
+      # Insert pairs
+      next if !ref $key && $key !~ $DBIx::Oro::KEY_REGEX;
+      push @keys,   $key;
+      push @values, $value;
     };
 
     # Create insert string
@@ -292,7 +293,7 @@ sub insert {
     };
 
     $sql .= 'INTO ' . $table .
-      ' (' . join(', ', @keys) . ') VALUES (' . _q(\@keys) . ')';
+      ' (' . join(', ', @keys) . ') VALUES (' . DBIx::Oro::_q(\@values) . ')';
 
     # Prepare and execute
     my $rv = $self->prep_and_exec( $sql, \@values );
@@ -331,7 +332,7 @@ sub insert {
     unshift(@keys, @default_keys);
 
     my $sql = 'INSERT INTO ' . $table . ' (' . join(', ', @keys) . ') ';
-    my $union = 'SELECT ' . _q(\@keys);
+    my $union = 'SELECT ' . DBIx::Oro::_q(\@keys);
 
     # Maximum bind variables
     my $max = ($MAX_COMP_SELECT / @keys) - @keys;
@@ -733,12 +734,6 @@ sub _decr_commit {
       ${$self->{_autocounter}} = ${$self->{autocommit}};
     };
   };
-};
-
-
-# Questionmark string
-sub _q {
-  join(', ', split('', '?' x scalar( @{$_[0]} )));
 };
 
 
