@@ -558,12 +558,12 @@ aliases for the field names.
 
 
 Returns a response hash based on queries as specified in
-L<http://www.opensearch.org/Specifications/OpenSearch/1.1#OpenSearch_1.1_parameters|OpenSearch>
-and L<http://portablecontacts.net/draft-spec.html|PortableContacts>.
+L<OpenSearch|http://www.opensearch.org/Specifications/OpenSearch/1.1#OpenSearch_1.1_parameters>
+and L<PortableContacts|http://portablecontacts.net/draft-spec.html>.
 This is useful to be directly called from web applications.
 
 Expects a table name (in case no table or joined table was created
-using L</table|table>) and a hash reference supporting the following
+using L<table|/table>) and a hash reference supporting the following
 parameters:
 
 =over 4
