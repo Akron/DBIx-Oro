@@ -1,4 +1,8 @@
-0.28 2013-04-02
+0.29 2013-05-17
+        - 0.29_1
+	  - Add list method.
+
+0.28 2013-05-15
         - 0.28_1
 	  - Improve documentation.
 	  - Add SQLite tests to the suite.

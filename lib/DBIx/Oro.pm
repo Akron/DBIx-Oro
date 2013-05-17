@@ -2,7 +2,7 @@ package DBIx::Oro;
 use strict;
 use warnings;
 
-our $VERSION = '0.28_7';
+our $VERSION = '0.29_1';
 
 # See the bottom of this file for the POD documentation.
 
@@ -37,7 +37,6 @@ our $VERSION = '0.28_7';
 # Todo: my $value = $oro->value(Table => 'Field') # Ähnlich wie count
 # Todo: Oder my ($value) = $oro->value(Table => Field => { -limit => 1 }) # und es gibt ein Array zurück
 
-# Todo: Improve documentation by introducing an "ADVANCED" section for some methods.
 
 use v5.10.1;
 
@@ -61,6 +60,9 @@ our $KEY_REGEX = qr/[_\.0-9a-zA-Z]+/;
 
 our $KEY_REGEX_NOPREF = qr/[_0-9a-zA-Z]+/;
 
+our $NUM_RE = qr/^\s*(\d+)\s*$/;
+
+
 our $SFIELD_REGEX =
   qr/(?:$KEY_REGEX|(?:$KEY_REGEX\.)?\*|"[^"]*"|'[^']*')/;
 
@@ -80,6 +82,8 @@ our $VALID_GROUPORDER_REGEX =
 our $FIELD_REST_RE = qr/^(.+?)(:~?)([^:"~][^:"]*?)$/;
 
 our $CACHE_COMMENT = 'From Cache';
+
+our $ITEMS_PER_PAGE = 25;
 
 our @EXTENSIONS = ();
 
@@ -620,6 +624,143 @@ sub select {
 
   # Return result
   $result;
+};
+
+
+# List elements
+sub list {
+  my $self = shift;
+
+  my $param = pop if ref $_[-1] && ref $_[-1] eq 'HASH';
+
+  $self = $self->table(@_) if $_[0];
+
+  my (%condition, %pagination);
+
+  foreach (qw/startIndex count startPage/) {
+    next unless exists $param->{$_};
+    if ($param->{$_} && !ref $param->{$_} && $param->{$_} =~ $NUM_RE) {
+      $param->{$_} = $1;
+    }
+    else {
+      delete $param->{$_};
+    };
+  };
+
+  my %sort;
+  my $sort_by = $param->{sortBy} if $param->{sortBy} && !ref $param->{sortBy};
+  if ($sort_by && $sort_by =~ s/^\s*($KEY_REGEX)\s*$/$1/) {
+    my $sort_order = index(lc(''.($param->{sortOrder} // 'asc')), 'desc') == 0 ? 'descending' : undef;
+
+    $pagination{-order} = $sort_order ? "-$sort_by" : $sort_by;
+    $sort{sortBy} = $sort_by;
+    $sort{sortOrder} = $sort_order if $sort_order;
+  };
+
+  $pagination{-offset} = ($param->{startIndex} //= 0);
+
+  $pagination{-limit} = $param->{count} || $ITEMS_PER_PAGE;
+
+  my $start_page = $param->{startPage} // 1;
+  if ($start_page > 1) {
+    $pagination{-offset} //= 0;
+    $pagination{-offset} += (($start_page - 1) * $pagination{-limit});
+  };
+
+  my %filter;
+  my $filter_by = $param->{filterBy} if $param->{filterBy} && !ref $param->{filterBy};
+
+  if ($filter_by) {
+    my $filter_op = lc($param->{filterOp}) if $param->{filterOp} && !ref $param->{filterOp};
+
+    if ($filter_op) {
+      $filter{filterBy} = $filter_by;
+      $filter{filterOp} = $filter_op;
+
+      if ($filter_op eq 'present') {
+	$condition{$filter_by} = { not => undef };
+      }
+
+      else {
+	my $fv = $param->{filterValue};
+
+	if ($fv && !ref $fv) {
+	  $filter{filterValue} = $fv;
+
+	  if ($filter_op eq 'equals') {
+	    $condition{$filter_by} = $fv;
+	  }
+	  else {
+	    $fv =~ s/(\%)/\\$1/g;
+	    $fv =~ s/(\_)/\\$1/g;
+	    if ($filter_op eq 'contains') {
+	      $condition{$filter_by} = { like => "%${fv}%" };
+	    }
+	    elsif ($filter_op eq 'startswith') {
+	      $filter{filterOp} = 'startsWith';
+	      $condition{$filter_by} = { like => "${fv}%" };
+	    };
+	  };
+	}
+	else {
+	  %filter = ();
+	};
+      };
+    };
+  };
+
+  my $total_results = $self->count(\%condition);
+
+  my $entry;
+  if ($total_results) {
+    my @fields;
+    if ($param->{fields}) {
+      if (ref $param->{fields}) {
+	@fields = @{ $param->{fields} };
+      }
+      else {
+	@fields =
+	  grep { /^$KEY_REGEX$/ }
+	    map { s/\s//g; $_ }
+	      split /\s*,\s*/, $param->{fields};
+      };
+    };
+
+    if (ref $self->{table} && @fields) {
+      # Is a joined table, filter fields afterwards
+      $self->select(
+	{ %condition, %pagination } => sub {
+	  my $row = shift;
+	  my %new;
+	  foreach (@fields) {
+	    $new{$_} = $row->{$_} if exists $row->{$_};
+	  };
+	  push(@$entry, \%new);
+	});
+
+      $filter{fields} = \@fields;
+    }
+    elsif (@fields) {
+      $filter{fields} = \@fields;
+      $entry = $self->select(\@fields, { %condition, %pagination });
+    }
+    else {
+      # Just prepend field to select
+      $entry = $self->select({ %condition, %pagination });
+    };
+  };
+
+  my $response = {
+    totalResults => $total_results,
+    startIndex   => $param->{startIndex},
+    itemsPerPage => $pagination{-limit},
+    startPage    => $start_page,
+    entry        => $entry || [],
+    %filter,
+    %sort
+  };
+
+  return $response;
 };
 
 
@@ -1480,6 +1621,11 @@ sub _get_pairs {
 		$p .= 'NULL';
 	      };
 
+	      # Add LIKE escape sequence
+	      if ($op eq 'LIKE') {
+		$p .= q! ESCAPE '\'!;
+	      };
+
 	      push(@pairs, $p);
 	    };
 
@@ -1515,6 +1661,9 @@ sub _get_pairs {
     # Restriction of the result set
     else {
       $key = lc $key;
+
+      # No value existing
+      next unless defined $value;
 
       # Limit and Offset restriction
       if ($key ~~ [qw/-limit -offset -distinct/]) {
@@ -2318,6 +2467,91 @@ Fields can be column names or functions. With a colon you can define
 aliases for the field names.
 
 
+=head2 list
+
+  my $users = $oro->list(Table => {
+    sortBy => 'name',
+    startPage => 5,
+    count => 20
+  });
+
+
+Returns a response hash based on queries as specified in
+L<http://www.opensearch.org/Specifications/OpenSearch/1.1#OpenSearch_1.1_parameters|OpenSearch>
+and L<http://portablecontacts.net/draft-spec.html|PortableContacts>.
+This is useful to be directly called from web applications.
+
+Expects a table name (in case no table or joined table was created
+using L</table|table>) and a hash reference supporting the following
+parameters:
+
+=over 4
+
+=item startIndex
+
+The offset index of the result set.
+Needs to be a positive integer. Defaults to C<0>.
+
+=item startPage
+
+The page number of the result set. Defaults to C<1>.
+
+=item count
+
+The number of entries per page. Defaults to 25.
+
+=item sortBy
+
+The field to sort the result by.
+Needs to be a field name.
+
+=item sortOrder
+
+The order of sorting. Defaults to C<ascending>.
+Also accepts C<descending>.
+
+=item filterBy
+
+A field to filter the result by.
+
+=item filterOp
+
+The operation to filter the results based on the C<filterBy> field.
+Supports C<present>, to filter on results that have the field defined,
+C<equals>, to filter on results that have the field with a value defined
+by C<filterValue>, C<contains>, to filter on results that have a field
+containing a string defined by C<filterValue>, and C<startsWith>, to filter
+on results that have a field starting with a string defined by C<filterValue>.
+
+=item fields
+
+An array reference or comma separated string of
+fields to be returned. Defaults to all fields.
+
+=back
+
+The created response is a hash reference with the following structure:
+
+  #  {
+  #    totalResults => 44,
+  #    startIndex   => 0,
+  #    itemsPerPage => 20,
+  #    startPage    => 5,
+  #    entry => [
+  #      { name => 'Akron', age => 20 },
+  #      { name => 'Peter', age => 30 }
+  #    ]
+  #  }
+
+All valid parameters are returned, including the C<totalResults> value,
+giving the number of elements in the non-filtered result set.
+The C<count> parameter is consumed and the correct C<itemsPerPage>
+value is returned. The C<entry> array reference contains hash references
+of all rows.
+
+B<This method is EXPERIMENTAL and may change without warnings.>
+
+
 =head2 count
 
   my $persons = $oro->count('Person');
@@ -2365,12 +2599,13 @@ Returns the number of rows that were deleted.
     ]
   );
   $books->select({ author => 'Akron' });
+  $books->list({ filterBy => 'author', filterOp => 'present' });
   print $books->count;
 
 Returns a new Oro object with a predefined table or joined tables.
 
 Allows to omit the first table argument for the methods
-L<select|/select>, L<load|/load>, L<count|/count> and - in case of non-joined-tables -
+L<select|/select>, L<load|/load>, L<list|/list>, L<count|/count> and - in case of non-joined-tables -
 for L<insert|/insert>, L<update|/update>, L<merge|/merge>, and L<delete|/delete>.
 
 In conjunction with a joined table this can be seen as an I<ad hoc view>.
