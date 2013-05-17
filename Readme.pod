@@ -548,6 +548,91 @@ Fields can be column names or functions. With a colon you can define
 aliases for the field names.
 
 
+=head2 list
+
+  my $users = $oro->list(Table => {
+    sortBy => 'name',
+    startPage => 5,
+    count => 20
+  });
+
+
+Returns a response hash based on queries as specified in
+L<http://www.opensearch.org/Specifications/OpenSearch/1.1#OpenSearch_1.1_parameters|OpenSearch>
+and L<http://portablecontacts.net/draft-spec.html|PortableContacts>.
+This is useful to be directly called from web applications.
+
+Expects a table name (in case no table or joined table was created
+using L</table|table>) and a hash reference supporting the following
+parameters:
+
+=over 4
+
+=item startIndex
+
+The offset index of the result set.
+Needs to be a positive integer. Defaults to C<0>.
+
+=item startPage
+
+The page number of the result set. Defaults to C<1>.
+
+=item count
+
+The number of entries per page. Defaults to 25.
+
+=item sortBy
+
+The field to sort the result by.
+Needs to be a field name.
+
+=item sortOrder
+
+The order of sorting. Defaults to C<ascending>.
+Also accepts C<descending>.
+
+=item filterBy
+
+A field to filter the result by.
+
+=item filterOp
+
+The operation to filter the results based on the C<filterBy> field.
+Supports C<present>, to filter on results that have the field defined,
+C<equals>, to filter on results that have the field with a value defined
+by C<filterValue>, C<contains>, to filter on results that have a field
+containing a string defined by C<filterValue>, and C<startsWith>, to filter
+on results that have a field starting with a string defined by C<filterValue>.
+
+=item fields
+
+An array reference or comma separated string of
+fields to be returned. Defaults to all fields.
+
+=back
+
+The created response is a hash reference with the following structure:
+
+  #  {
+  #    totalResults => 44,
+  #    startIndex   => 0,
+  #    itemsPerPage => 20,
+  #    startPage    => 5,
+  #    entry => [
+  #      { name => 'Akron', age => 20 },
+  #      { name => 'Peter', age => 30 }
+  #    ]
+  #  }
+
+All valid parameters are returned, including the C<totalResults> value,
+giving the number of elements in the non-filtered result set.
+The C<count> parameter is consumed and the correct C<itemsPerPage>
+value is returned. The C<entry> array reference contains hash references
+of all rows.
+
+B<This method is EXPERIMENTAL and may change without warnings.>
+
+
 =head2 count
 
   my $persons = $oro->count('Person');
@@ -595,12 +680,13 @@ Returns the number of rows that were deleted.
     ]
   );
   $books->select({ author => 'Akron' });
+  $books->list({ filterBy => 'author', filterOp => 'present' });
   print $books->count;
 
 Returns a new Oro object with a predefined table or joined tables.
 
 Allows to omit the first table argument for the methods
-L<select|/select>, L<load|/load>, L<count|/count> and - in case of non-joined-tables -
+L<select|/select>, L<load|/load>, L<list|/list>, L<count|/count> and - in case of non-joined-tables -
 for L<insert|/insert>, L<update|/update>, L<merge|/merge>, and L<delete|/delete>.
 
 In conjunction with a joined table this can be seen as an I<ad hoc view>.
