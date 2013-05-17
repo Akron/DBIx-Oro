@@ -2498,7 +2498,7 @@ The page number of the result set. Defaults to C<1>.
 
 =item count
 
-The number of entries per page. Defaults to 25.
+The number of entries per page. Defaults to C<25>.
 
 =item sortBy
 
