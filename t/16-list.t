@@ -486,3 +486,17 @@ is($list->{entry}->[3]->{sex},'male', 'sex');
 is($list->{entry}->[4]->{sex},'female', 'sex');
 is($list->{entry}->[5]->{sex},'female', 'sex');
 
+# Unknown table
+no_warn {
+  $list = $oro->list('Name2' => {
+    filterBy => 'surname',
+    filterOp => 'STARTSWITH',
+    filterValue => 'W',
+    sortBy => 'surname',
+    sortOrder => 'descending',
+    fields => 'surname,age'
+  });
+
+  ok(!$list, 'Unknown table');
+};
+

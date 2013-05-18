@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use Test::More tests => 67;
+use Test::More tests => 69;
 
 use Data::Dumper;
 use File::Temp qw/:POSIX/;
@@ -177,6 +177,12 @@ $oro->select('Name' => ['prename'] =>
 ok($oro->insert(Name => { prename => 'Ulli' }), 'Insert Ulli');
 
 is($oro->count('Name' => { surname => 'Sojolicious' } ), 1, 'Count');
+
+# Is undef
+no_warn {
+  ok(!$oro->count('Name2' => { surname => 'Sojolicious' } ), 'Count');
+  ok(!defined $oro->count('Name2' => { surname => 'Sojolicious' } ), 'Count');
+};
 
 is($oro->count('Name' => { surname => undef } ), 1, 'Count');
 

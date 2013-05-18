@@ -631,77 +631,113 @@ sub select {
 sub list {
   my $self = shift;
 
+  # Get param hash reference
   my $param = pop if ref $_[-1] && ref $_[-1] eq 'HASH';
 
-  $self = $self->table(@_) if $_[0];
+  # Get table object
+  $self = $self->table( @_ ) if $_[0];
 
   my (%condition, %pagination);
 
-  foreach (qw/startIndex count startPage/) {
-    next unless exists $param->{$_};
-    if ($param->{$_} && !ref $param->{$_} && $param->{$_} =~ $NUM_RE) {
-      $param->{$_} = $1;
-    }
-    else {
-      delete $param->{$_};
-    };
-  };
 
+  # Check numerical values
+  my $start_index = _check_param($param, 'startIndex', 'num') // 0;
+  my $count       = _check_param($param, 'count',      'num');
+  my $start_page  = _check_param($param, 'startPage',  'num') // 1;
+
+  # Set caching condition
+  $condition{-cache} = delete $param->{cache} if $param->{-cache};
+
+  ### Sorting parameters
   my %sort;
-  my $sort_by = $param->{sortBy} if $param->{sortBy} && !ref $param->{sortBy};
-  if ($sort_by && $sort_by =~ s/^\s*($KEY_REGEX)\s*$/$1/) {
-    my $sort_order = index(lc(''.($param->{sortOrder} // 'asc')), 'desc') == 0 ? 'descending' : undef;
 
+  # Check, if parameter is a field
+  my $sort_by = _check_param($param, 'sortBy');
+  if ($sort_by && $sort_by =~ s/^\s*($KEY_REGEX)\s*$/$1/) {
+
+    $param->{sortOrder} //= 'ascending';
+    my $sort_order = index(lc($param->{sortOrder}), 'desc') == 0 ? 'descending' : undef;
+
+    # Set SQL limitation
     $pagination{-order} = $sort_order ? "-$sort_by" : $sort_by;
-    $sort{sortBy} = $sort_by;
+
+    # Set sort information
+    $sort{sortBy}    = $sort_by;
     $sort{sortOrder} = $sort_order if $sort_order;
   };
 
-  $pagination{-offset} = ($param->{startIndex} //= 0);
+  # Set SQL limitations
+  $pagination{-offset} = $start_index;
+  $pagination{-limit}  = $count || $ITEMS_PER_PAGE;
 
-  $pagination{-limit} = $param->{count} || $ITEMS_PER_PAGE;
-
-  my $start_page = $param->{startPage} // 1;
+  # Not first page
   if ($start_page > 1) {
+
+    # Set SQL limitations
     $pagination{-offset} //= 0;
     $pagination{-offset} += (($start_page - 1) * $pagination{-limit});
   };
 
+
+  ### Filter parameters
   my %filter;
-  my $filter_by = $param->{filterBy} if $param->{filterBy} && !ref $param->{filterBy};
 
+  # Filter parameter is set
+  my $filter_by = _check_param($param, 'filterBy');
   if ($filter_by) {
-    my $filter_op = lc($param->{filterOp}) if $param->{filterOp} && !ref $param->{filterOp};
 
+    # Filter operation is set
+    my $filter_op = _check_param($param, 'filterOp');
     if ($filter_op) {
+      $filter_op = lc $filter_op;
+
+      # Set parameters for response
       $filter{filterBy} = $filter_by;
       $filter{filterOp} = $filter_op;
 
+      # Check for presence
       if ($filter_op eq 'present') {
+
+	# Create SQL condition
 	$condition{$filter_by} = { not => undef };
       }
 
+      # Check with filterValue
       else {
-	my $fv = $param->{filterValue};
 
-	if ($fv && !ref $fv) {
+	# Get filterValue
+	if (my $fv = _check_param($param, 'filterValue')) {
+
+	  # Set filter value for response
 	  $filter{filterValue} = $fv;
 
+	  # Check for equality
 	  if ($filter_op eq 'equals') {
+
+	    # Equals the value
 	    $condition{$filter_by} = $fv;
 	  }
+
+	  # Check with SQL like
 	  else {
-	    $fv =~ s/(\%)/\\$1/g;
-	    $fv =~ s/(\_)/\\$1/g;
+	    $fv =~ s/([\%_])/\\$1/g;
+
+	    # Check for containing
 	    if ($filter_op eq 'contains') {
 	      $condition{$filter_by} = { like => "%${fv}%" };
 	    }
+
+	    # Check for beginning
 	    elsif ($filter_op eq 'startswith') {
+
+	      # Set response operation
 	      $filter{filterOp} = 'startsWith';
 	      $condition{$filter_by} = { like => "${fv}%" };
 	    };
 	  };
 	}
+
+	# No filterValue - reset
 	else {
 	  %filter = ();
 	};
@@ -709,28 +745,44 @@ sub list {
     };
   };
 
+  # Get count
   my $total_results = $self->count(\%condition);
 
-  my $entry;
-  if ($total_results) {
-    my @fields;
-    if ($param->{fields}) {
-      if (ref $param->{fields}) {
-	@fields = @{ $param->{fields} };
-      }
-      else {
-	@fields =
-	  grep { /^$KEY_REGEX$/ }
-	    map { s/\s//g; $_ }
-	      split /\s*,\s*/, $param->{fields};
-      };
-    };
+  # Something went wrong
+  return unless defined $total_results;
 
+  # Check fields
+  my @fields;
+  if ($param->{fields}) {
+
+    # Fields is a reference
+    if (ref $param->{fields}) {
+      @fields = @{ $param->{fields} };
+    }
+
+    # Fields is a string
+    else {
+      @fields =
+	grep { /^$KEY_REGEX$/ }
+	  map { s/\s//g; $_ }
+	    split /\s*,\s*/, $param->{fields};
+    };
+  };
+
+  my $entry;
+
+  # More than one result
+  if ($total_results) {
+
+    # Table is joined and there are fields existing
     if (ref $self->{table} && @fields) {
+
       # Is a joined table, filter fields afterwards
       $self->select(
 	{ %condition, %pagination } => sub {
 	  my $row = shift;
+
+	  # Filter
 	  my %new;
 	  foreach (@fields) {
 	    $new{$_} = $row->{$_} if exists $row->{$_};
@@ -738,29 +790,34 @@ sub list {
 	  push(@$entry, \%new);
 	});
 
+      # Define fields
       $filter{fields} = \@fields;
     }
+
+    # Fields in simple table
     elsif (@fields) {
+
+      # Just prepend field to select
       $filter{fields} = \@fields;
       $entry = $self->select(\@fields, { %condition, %pagination });
     }
+
+    # No fields
     else {
-      # Just prepend field to select
       $entry = $self->select({ %condition, %pagination });
     };
   };
 
-  my $response = {
+  # Return response
+  {
     totalResults => $total_results,
-    startIndex   => $param->{startIndex},
+    startIndex   => $start_index,
     itemsPerPage => $pagination{-limit},
     startPage    => $start_page,
     entry        => $entry || [],
     %filter,
     %sort
   };
-
-  return $response;
 };
 
 
@@ -933,7 +990,7 @@ sub count {
   my ($rv, $sth) = $self->prep_and_exec($sql, $values || []);
 
   # Return value is empty
-  return 0 if !$rv;
+  return undef if !$rv;
 
   # Return count
   $result = $sth->fetchrow_arrayref->[0] || 0;
@@ -1866,6 +1923,24 @@ sub _clean_alias {
 };
 
 
+# Check list param
+sub _check_param {
+  if ($_[0]->{$_[1]} && !ref $_[0]->{ $_[1] }) {
+
+    # Check for numerical value
+    if ($_[2]) {
+      return $_[0]->{$_[1]} =~ $NUM_RE ? $1 : undef;
+    };
+
+    # Return value
+    return $_[0]->{$_[1]};
+  };
+
+  # Fail
+  return;
+};
+
+
 # Questionmark string
 sub _q {
   my ($s, $i, $r);
@@ -2529,6 +2604,8 @@ An array reference or comma separated string of
 fields to be returned. Defaults to all fields.
 
 =back
+
+In addition to that, the caching system can be applied as with L<select|/select>.
 
 The created response is a hash reference with the following structure:
 
