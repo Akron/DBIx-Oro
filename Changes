@@ -3,6 +3,7 @@
 	  - Add list method.
 	- 0.29_2
 	  - Fix count bug.
+	  - Fixed bug in list caching.
 
 0.28 2013-05-15
         - 0.28_1
