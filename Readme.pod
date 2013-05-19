@@ -604,12 +604,19 @@ by C<filterValue>, C<contains>, to filter on results that have a field
 containing a string defined by C<filterValue>, and C<startsWith>, to filter
 on results that have a field starting with a string defined by C<filterValue>.
 
+=item filterValue
+
+The string to check with C<filterOp>.
+
+
 =item fields
 
 An array reference or comma separated string of
 fields to be returned. Defaults to all fields.
 
 =back
+
+In addition to that, the caching system can be applied as with L<select|/select>.
 
 The created response is a hash reference with the following structure:
 
