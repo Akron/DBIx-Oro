@@ -646,7 +646,7 @@ sub list {
   my $start_page  = _check_param($param, 'startPage',  'num') // 1;
 
   # Set caching condition
-  $condition{-cache} = delete $param->{cache} if $param->{-cache};
+  $condition{-cache} = delete $param->{-cache} if $param->{-cache};
 
   ### Sorting parameters
   my %sort;
