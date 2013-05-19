@@ -2598,6 +2598,11 @@ by C<filterValue>, C<contains>, to filter on results that have a field
 containing a string defined by C<filterValue>, and C<startsWith>, to filter
 on results that have a field starting with a string defined by C<filterValue>.
 
+=item filterValue
+
+The string to check with C<filterOp>.
+
+
 =item fields
 
 An array reference or comma separated string of
