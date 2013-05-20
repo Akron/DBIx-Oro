@@ -1,6 +1,6 @@
 package DBIx::Oro::Driver::SQLite;
-use strict;
 use warnings;
+use strict;
 use DBIx::Oro;
 our @ISA;
 BEGIN { @ISA = 'DBIx::Oro' };
@@ -23,8 +23,10 @@ use File::Path;
 use File::Basename;
 
 # Default arguments for snippet function
-my @arguments = qw/start end ellipsis
-		   column token/;
+my @arguments =
+  qw/start end ellipsis column token/;
+
+my $arguments = qr/^(?:start|end|ellipsis|column|token)$/;
 
 my @default = ('<b>', '</b>', '<b>...</b>', -1, -15);
 
@@ -285,10 +287,12 @@ sub insert {
     # Create insert string
     my $sql = 'INSERT ';
 
-    if ($prop) {
-      given ($prop->{-on_conflict}) {
-	when ('replace') { $sql .= 'OR REPLACE '};
-	when ('ignore')  { $sql .= 'OR IGNORE '};
+    if ($prop && (my $oc = $prop->{-on_conflict})) {
+      if ($oc eq 'replace') {
+	$sql = 'REPLACE '
+      }
+      elsif ($oc eq 'ignore')  {
+	$sql .= 'IGNORE '
       };
     };
 
@@ -521,33 +525,31 @@ sub _matchinfo_return {
 
   # Parse format character
   my %match;
-  foreach my $char (split '', $format) {
-    given ($char) {
+  foreach (split '', $format) {
 
-      # Characters: p, c, n
-      when ([qw/p c n/]) {
-	$match{$_} = shift @matchinfo;
+    # Characters: p, c, n
+    if ($_ eq 'p' or $_ eq 'c' or $_ eq 'n') {
+      $match{$_} = shift @matchinfo;
+    }
+
+    # Characters: a, l, s
+    elsif ($_ eq 'a' or $_ eq 'l' or $_ eq 's') {
+      $match{$_} = [ splice(@matchinfo, 0, $match{c}) ];
+    }
+
+    # Characters: x
+    elsif ($_ eq 'x') {
+      my @match;
+      for (1 .. ($match{p} * $match{c})) {
+	push(@match, [ splice(@matchinfo, 0, 3) ]);
       };
 
-      # Characters: a, l, s
-      when ([qw/a l s/]) {
-	$match{$_} = [ splice(@matchinfo, 0, $match{c}) ];
-      };
+      $match{$_} = \@match;
+    }
 
-      # Characters: x
-      when ('x') {
-	my @match;
-	for (1 .. ($match{p} * $match{c})) {
-	  push(@match, [ splice(@matchinfo, 0, 3) ]);
-	};
-
-	$match{$_} = \@match;
-      };
-
-      # Unknown character
-      default {
-	shift @matchinfo;
-      };
+    # Unknown character
+    else {
+      shift @matchinfo;
     };
   };
   return \%match;
@@ -590,10 +592,10 @@ sub snippet {
     my %snippet = ();
 
     # Parameters are given as a hash
-    if ($_[0] ~~ \@arguments) {
+    if ($_[0] =~ $arguments) {
       %snippet = @_;
       foreach (keys %snippet) {
-	carp "Unknown snippet parameter '$_'" unless $_ ~~ \@arguments;
+	carp "Unknown snippet parameter '$_'" unless $_ =~ $arguments;
       };
     }
 

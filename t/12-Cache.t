@@ -104,7 +104,7 @@ $result = $oro->select(Name => {
   }
 } => sub {
   my $row = shift;
-  ok($row->{prename} ~~ [qw/Michael Peter Sabine/], 'Name');
+  like($row->{prename}, qr/^(?:Michael|Peter|Sabine)$/, 'Name');
 });
 
 ($last_sql, $last_sql_cache) = $oro->last_sql;
@@ -118,7 +118,7 @@ $result = $oro->select(Name => {
   }
 } => sub {
   my $row = shift;
-  ok($row->{prename} ~~ [qw/Michael Peter Sabine/], 'Name 2');
+  like($row->{prename}, qr/^(?:Michael|Peter|Sabine)$/, 'Name 2');
 });
 
 ($last_sql, $last_sql_cache) = $oro->last_sql;
@@ -134,7 +134,7 @@ $result = $oro->select(Name => {
   }
 } => sub {
   my $row = shift;
-  ok($row->{prename} ~~ [qw/Michael Peter Sabine/], 'Name 3');
+  like($row->{prename}, qr/^(?:Michael|Peter|Sabine)$/, 'Name 3');
 });
 
 ($last_sql, $last_sql_cache) = $oro->last_sql;
@@ -150,7 +150,7 @@ $result = $oro->select(Name => {
   }
 } => sub {
   my $row = shift;
-  ok($row->{prename} ~~ [qw/Michael Peter Sabine/], 'Name 4');
+  like($row->{prename}, qr/^(?:Michael|Peter|Sabine)$/, 'Name 4');
   return $count_result--;
 });
 

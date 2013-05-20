@@ -338,10 +338,12 @@ sub insert {
     # Create insert string
     my $sql = 'INSERT ';
 
-    if ($prop) {
-      given ($prop->{-on_conflict}) {
-	when ('replace') { $sql = 'REPLACE '};
-	when ('ignore')  { $sql .= 'IGNORE '};
+    if ($prop && (my $oc = $prop->{-on_conflict})) {
+      if ($oc eq 'replace') {
+	$sql = 'REPLACE '
+      }
+      elsif ($oc eq 'ignore')  {
+	$sql .= 'IGNORE '
       };
     };
 
@@ -415,7 +417,9 @@ sub update {
   return unless @$pairs;
 
   # No arrays or operators allowed
-  return unless $pairs ~~ /^$KEY_REGEX\s+(?:=|IS\s)/o;
+  foreach (@$pairs) {
+    return unless $_ =~ /^$KEY_REGEX\s+(?:=|IS\s)/o;
+  };
 
   # Set undef to pairs
   my @pairs = map { $_ =~ s{ IS NULL$}{ = NULL}io; $_ } @$pairs;
@@ -1723,7 +1727,7 @@ sub _get_pairs {
       next unless defined $value;
 
       # Limit and Offset restriction
-      if ($key ~~ [qw/-limit -offset -distinct/]) {
+      if ($key =~ m/^-(?:limit|offset|distinct)$/) {
 	$prep{substr($key, 1)} = $value if $value =~ m/^\d+$/o;
       }
 
@@ -1946,11 +1950,15 @@ sub _q {
   my ($s, $i, $r);
 
   # Loop over all values
-  for ($i = 0; $i < scalar(@{$_[0]}); $i++) {
+  for ($i = 0; $i < scalar(@{$_[0]});) {
     $r = $_[0]->[$i];
 
     # Append key
-    $s .= '?,' and next unless ref $r;
+    unless (ref $r) {
+      $s .= '?,';
+      $i++;
+      next;
+    };
 
     # Scalar for direct SQL input
     if (ref $r eq 'SCALAR') {
@@ -1964,16 +1972,18 @@ sub _q {
       # Check for scalar reference
       unless (ref $r->[0]) {
 	carp 'First element of array insertion needs to be a scalar reference';
-	splice(@{$_[0]}, $i, 1) and next;
+	splice(@{$_[0]}, $i++, 1);
+	next;
       };
 
       # Embed SQL statement directly
       $s .= '(' . ${ shift @$r } . '),';
-      splice(@{$_[0]}, $i, scalar @$r, @$r);
+      splice(@{$_[0]}, $i++, scalar @$r, @$r);
     }
 
     # Stringifyable objects
     else {
+      $i++;
       $s .= '?,' and next;
     };
   };

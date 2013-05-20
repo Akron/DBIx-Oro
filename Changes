@@ -4,6 +4,8 @@
 	- 0.29_2
 	  - Fix count bug.
 	  - Fixed bug in list caching.
+	- 0.29_3
+	  - Fix perl 5.18.0 compatibility problems.
 
 0.28 2013-05-15
         - 0.28_1
