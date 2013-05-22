@@ -2,7 +2,7 @@ package DBIx::Oro;
 use strict;
 use warnings;
 
-our $VERSION = '0.29_3';
+our $VERSION = '0.29_4';
 
 # See the bottom of this file for the POD documentation.
 
@@ -706,6 +706,13 @@ sub list {
 	$condition{$filter_by} = { not => undef };
       }
 
+      # Check for absence
+      elsif ($filter_op eq 'absent') {
+
+	# Create SQL condition
+	$condition{$filter_by} = undef;
+      }
+
       # Check with filterValue
       else {
 
@@ -720,6 +727,13 @@ sub list {
 
 	    # Equals the value
 	    $condition{$filter_by} = $fv;
+	  }
+
+	  # Check for disparaty
+	  elsif ($filter_op eq 'disparate') {
+
+	    # Equals the value
+	    $condition{$filter_by} = { ne => $fv };
 	  }
 
 	  # Check with SQL like
@@ -2602,11 +2616,15 @@ A field to filter the result by.
 =item filterOp
 
 The operation to filter the results based on the C<filterBy> field.
-Supports C<present>, to filter on results that have the field defined,
-C<equals>, to filter on results that have the field with a value defined
-by C<filterValue>, C<contains>, to filter on results that have a field
+Supports C<present>, to filter on results that have the field defined
+(opposite to C<absent>), C<equals>, to filter on results that have
+the field with a value defined by C<filterValue> (opposite to C<disparate>),
+C<contains>, to filter on results that have a field
 containing a string defined by C<filterValue>, and C<startsWith>, to filter
 on results that have a field starting with a string defined by C<filterValue>.
+
+B<Note>: The C<absent> and C<disparate> filter operations are EXPERIMENTAL
+and may change without warnings.
 
 =item filterValue
 

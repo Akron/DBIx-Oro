@@ -598,11 +598,15 @@ A field to filter the result by.
 =item filterOp
 
 The operation to filter the results based on the C<filterBy> field.
-Supports C<present>, to filter on results that have the field defined,
-C<equals>, to filter on results that have the field with a value defined
-by C<filterValue>, C<contains>, to filter on results that have a field
+Supports C<present>, to filter on results that have the field defined
+(opposite to C<absent>), C<equals>, to filter on results that have
+the field with a value defined by C<filterValue> (opposite to C<disparate>),
+C<contains>, to filter on results that have a field
 containing a string defined by C<filterValue>, and C<startsWith>, to filter
 on results that have a field starting with a string defined by C<filterValue>.
+
+B<Note>: The C<absent> and C<disparate> filter operations are EXPERIMENTAL
+and may change without warnings.
 
 =item filterValue
 

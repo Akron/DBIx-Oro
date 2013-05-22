@@ -6,6 +6,8 @@
 	  - Fixed bug in list caching.
 	- 0.29_3
 	  - Fix perl 5.18.0 compatibility problems.
+	- 0.29_4
+	  - Add absent and disparate filter operations in list.
 
 0.28 2013-05-15
         - 0.28_1

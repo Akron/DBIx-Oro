@@ -153,6 +153,31 @@ is($list->{entry}->[0]->{prename}, 'Patricia', 'prename');
 ok(!$list->{entry}->[1], 'No second entry');
 
 $list = $oro->list('Name' => {
+  filterBy => 'surname',
+  filterOp => 'disparate',
+  filterValue => 'Evans',
+  sortBy => 'id',
+  count => 200
+});
+
+is($list->{totalResults}, 19, 'totalResults');
+is($list->{itemsPerPage}, 200, 'itemsperpage');
+
+$list = $oro->list('Name' => {
+  filterBy => 'age',
+  filterOp => 'absent',
+  sortBy => 'id',
+  count => 1
+});
+
+is($list->{totalResults}, 1, 'totalResults');
+is($list->{itemsPerPage}, 1, 'itemsperpage');
+is($list->{entry}->[0]->{surname}, 'White', 'surname');
+is($list->{entry}->[0]->{prename}, 'Barbara', 'prename');
+ok(!$list->{entry}->[1], 'No second entry');
+
+
+$list = $oro->list('Name' => {
   filterBy => 'age',
   filterOp => 'present',
   filterValue => 'Evans', # ignored
