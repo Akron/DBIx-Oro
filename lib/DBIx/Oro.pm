@@ -29,7 +29,7 @@ our $VERSION = '0.29_4';
 # Debug: DBIx::Oro-Treatment in Joint Tables
 # Deprecate: Delete import_sql method and
 #            make it an extension
-# Todo: Support left outer join
+# Todo: Support left outer join (Maybe with id => 1, maybe => 1 in join hash)
 # Todo: Create all Queries in DBIx::Oro::Query
 # Todo: To change queries from different drivers,
 #       use events.
