@@ -1,4 +1,4 @@
-0.29 2013-05-18
+0.29 2013-05-29
         - 0.29_1
 	  - Add list method.
 	- 0.29_2
@@ -8,6 +8,8 @@
 	  - Fix perl 5.18.0 compatibility problems.
 	- 0.29_4
 	  - Add absent and disparate filter operations in list.
+	- 0.29_5
+	  - Support -or and -and junctions.
 
 0.28 2013-05-15
         - 0.28_1

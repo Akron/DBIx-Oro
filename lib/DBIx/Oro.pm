@@ -2,7 +2,7 @@ package DBIx::Oro;
 use strict;
 use warnings;
 
-our $VERSION = '0.29_4';
+our $VERSION = '0.29_5';
 
 # See the bottom of this file for the POD documentation.
 
@@ -1603,8 +1603,10 @@ sub _get_pairs {
       carp "$key is not a valid Oro key" and next;
     };
 
+    # Normal key
     if (substr($key, 0, 1) ne '-') {
 
+      # Get alias
       $key = exists $alias->{$key} ? $alias->{$key} : $key;
 
       # Equality
@@ -1779,6 +1781,42 @@ sub _get_pairs {
 	$prep{$key} = join(', ', @field_array) if scalar @field_array;
       }
 
+      # And or or
+      elsif ($key =~ m/^-(or|and)$/) {
+	my $op = uc $1;
+	my @array = @$value;
+
+	my (@or_pairs, @or_values);
+	while (@array) {
+
+	  # Not a hash
+	  if (!ref $array[0]) {
+	    unshift(@array, {
+	      shift @array => shift @array
+	    });
+	  };
+
+	  # Ignore prep
+	  my ($or_pairs, $or_values) = _get_pairs(shift(@array), $alias);
+
+	  # Push values
+	  push(@values, @$or_values);
+
+	  # Push local pairs
+	  if (@$or_pairs > 1) {
+	    push(@or_pairs, '(' . join (' AND ', @$or_pairs) . ')');
+	  }
+
+	  # Push single local pair
+	  else {
+	    push(@or_pairs, $or_pairs->[0]);
+	  };
+	};
+
+	# Join with chosen operator
+	push(@pairs, '(' . join(" $op ", @or_pairs) . ')');
+      }
+
       # Cache
       elsif ($key eq '-cache') {
 	my $chi = delete $value->{chi};
@@ -1792,6 +1830,9 @@ sub _get_pairs {
 	else {
 	  carp 'No CHI driver given for cache';
 	};
+      }
+      else {
+	carp "$key is an unknown restriction";
       };
     };
   };
@@ -2325,7 +2366,7 @@ Returns an array reference of rows as hash references of a given table,
 that meet a given condition.
 
 Expects the table name of the selection and optionally an array reference
-of fields, optionally a hash reference with conditions and restrictions
+of fields, optionally a hash reference with conditions, junctions and restrictions
 all rows have to fulfill, and optionally a callback,
 which is released after each row, passing the row as a hash reference.
 
@@ -2380,10 +2421,40 @@ Multiple operators for checking with the same column are supported.
 B<Operators are EXPERIMENTAL and may change without warnings.>
 
 
+=head3 Junctions
+
+By using a hash reference for conditions, the ordering of the condition is random.
+In case of C<AND> conjunctions, ordering is semantically irrelevant, however
+sometimes database queries benefit from certain orders. Junctions help to
+force the ordering and grouping of conditions and enables to create C<OR> disjunctions.
+
+  my $users = $oro->select(
+    Person => {
+      -or => [
+        { name => { like => '%e%' }},
+        { age => 40 },
+        {
+          -and => [
+            place => 'Springfield',
+            gender => 'undecided'
+          ]
+        }
+      ]
+    }
+  );
+
+The junctions C<or> and C<and> are prepended with a minus and need an array
+reference with either condition pairs or hash references containing conditions.
+The order of the conditions will stay intact. Junctions can be nested.
+
+B<Conjunctions are EXPERIMENTAL and may change without warnings.>
+
+
 =head3 Restrictions
 
 In addition to conditions, the selection can be restricted by using
-special restriction parameters, all prepended by a C<-> symbol:
+special restriction parameters, all prepended by a C<-> symbol
+in the top hash reference:
 
   my $users = $oro->select(
     Person => {
@@ -2438,6 +2509,8 @@ Boolean value. If set to a true value, only distinct rows are returned.
 
 =back
 
+Restrictions can not be nested in L<junctions|/Junctions>.
+
 
 =head3 Joined Tables
 
@@ -2470,7 +2543,7 @@ identical content, fields with identical markers littler than C<0>
 will have different content.
 
 After the join table array reference, the optional hash
-reference with conditions and restrictions and an optional
+reference with conditions, junctions and restrictions and an optional
 callback may follow.
 
 B<Joins are EXPERIMENTAL and may change without warnings.>
@@ -2557,7 +2630,7 @@ that meets a given condition.
 Expects the table name of selection, an optional array reference of fields
 to return and a hash reference with conditions, the rows have to fulfill.
 Normally this will include the primary key.
-Restrictions as well as the caching system can be applied as with
+Junctions, restrictions, as well as the caching system can be applied as with
 L<select|/select>.
 In case of scalar values, identity is tested.
 In case of array references, it is tested, if the field value is an
@@ -2681,11 +2754,11 @@ Caching can be applied as with L<select|/select>.
 Deletes rows of a given table, that meet a given condition.
 
 Expects the table name of selection and optionally a hash reference
-with conditions and restrictions, the rows have to fulfill.
+with conditions, junctions and restrictions, the rows have to fulfill.
 In case of scalar values, identity is tested for the condition.
 In case of array references, it is tested, if the field value is an
 element of the set.
-Restrictions can be applied as with L<select|/select>.
+Junctions and restrictions can be applied as with L<select|/select>.
 
 Returns the number of rows that were deleted.
 
