@@ -10,19 +10,19 @@ WriteMakefile(
   ABSTRACT     => 'Simple Relational Database Accessor',
   VERSION_FROM => 'lib/DBIx/Oro.pm',
   BUILD_REQUIRES => {
-    'Test::More'   => 0
+    'Test::More'   => 0,
+    'Math::BigInt' => 0,
+    'Data::Dumper' => 0
   },
   PREREQ_PM => {
     'DBD::SQLite'  => 1.33,
     'DBI'          => 1.57,
     'File::Temp'   => 0.20,
-    'Data::Dumper' => 0,
     'Carp'         => 0,
     'strict'       => 0,
     'warnings'     => 0,
     'utf8'         => 0,
-    'bytes'        => 0,
-    'Math::BigInt' => 0,
+    'bytes'        => 0
   },
   LICENSE      => 'perl',
   META_MERGE   => {
