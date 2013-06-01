@@ -129,8 +129,8 @@ $select = $oro->select(
   }
 );
 
-like($oro->last_sql, qr!\(age > \? OR age < \?\) AND sex = \?!, 'or combination');
-
+like($oro->last_sql, qr!\(age > \? OR age < \?\)!, 'or combination 1');
+like($oro->last_sql, qr!sex = \?!, 'or combination 2');
 
 is($select->[0]->{age}, 31, 'Age');
 is($select->[0]->{prename}, 'James', 'Prename');
@@ -187,8 +187,8 @@ $select = $oro->select(
   }
 );
 
-like($oro->last_sql, qr!\(age > \? OR age < \?\) AND sex = \?!, 'or combination');
-
+like($oro->last_sql, qr!\(age > \? OR age < \?\)!, 'or combination 1');
+like($oro->last_sql, qr!sex = \?!, 'or combination 2');
 
 is($select->[0]->{age}, 31, 'Age');
 is($select->[0]->{prename}, 'James', 'Prename');

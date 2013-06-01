@@ -2,7 +2,7 @@ package DBIx::Oro;
 use strict;
 use warnings;
 
-our $VERSION = '0.29_5';
+our $VERSION = '0.29_7';
 
 # See the bottom of this file for the POD documentation.
 
@@ -332,7 +332,7 @@ sub insert {
       # Insert pairs
       next if !ref $key && $key !~ $DBIx::Oro::KEY_REGEX;
       push @keys,   $key;
-      push @values, $value;
+      push @values, _stringify($value);
    };
 
     # Create insert string
@@ -375,7 +375,7 @@ sub insert {
       # Has default value
       my ($key, $value) = @{ splice( @keys, $i, 1) };
       push(@default_keys, $key);
-      push(@default, $value);
+      push(@default, _stringify($value));
     };
 
     # Unshift default keys to front
@@ -928,14 +928,18 @@ sub merge {
 
       # Update
       $rv = $self->update( @param );
+
       return 1 if $rv;
 
       # Delete all element conditions
-      delete $cond{$_} foreach grep( ref( $cond{$_} ), keys %cond);
+      delete $cond{$_} foreach grep {
+	ref($cond{$_}) && !blessed($cond{$_})
+      } keys %cond;
 
       # Insert
       @param = ( { %param, %cond } );
       unshift(@param, $table) unless $self->{table};
+
       $rv = $self->insert(@param) or return -1;
 
       $job = 'insert';
@@ -1631,14 +1635,14 @@ sub _get_pairs {
 	# Escaped SQL
 	if (ref $value->[0] && ref $value->[0] eq 'SCALAR') {
 	  push(@pairs, "$key = (" . ${$value->[0]} . ')'),
-	    push(@values, @{$value}[ 1 .. $#$value ]);
+	    push(@values, map { _stringify($_) } @{$value}[ 1 .. $#$value ]);
 	  next;
 	};
 
 	# Undefined values in the array are not specified
 	# as ' IN (NULL, ...)' does not work
 	push (@pairs, "$key IN (" . _q($value) . ')' ),
-	  push(@values, @$value);
+	  push(@values, map { _stringify($_) } @$value);
       }
 
       # Operators
@@ -1664,7 +1668,7 @@ sub _get_pairs {
 	      # Between operator
 	      if (index($op, 'BETWEEN') >= 0) {
 		push(@pairs, "$key $op ? AND ?"),
-		  push(@values, @{$val}[0, 1]);
+		  push(@values, map { _stringify($_) } @{$val}[0, 1]);
 	      }
 
 	      # Not element of
@@ -1673,7 +1677,7 @@ sub _get_pairs {
 		# as ' NOT IN (NULL, ...)' does not work
 
 		push(@pairs, "$key NOT IN (" . _q($val) . ')' ),
-		  push(@values, @$val);
+		  push(@values, map { _stringify($_) } @$val);
 	      };
 	    }
 
@@ -1723,7 +1727,6 @@ sub _get_pairs {
 
       # Stringifiable object
       elsif ($value = _stringify($value)) {
-
 	# Simple object
 	push(@pairs, "$key = ?"),
 	  push(@values, $value);
@@ -1731,7 +1734,7 @@ sub _get_pairs {
 
       # Unknown pair
       else {
-	carp "Unknown Oro pair $key, $value" and next;
+	carp "Unknown Oro pair $key, " . ($value ? $value : '[undef]' ) and next;
       };
     }
 
@@ -1964,7 +1967,7 @@ sub _restrictions {
 
 # Check for stringification of blessed values
 sub _stringify {
-  my $ref = blessed $_[0];
+  my $ref = blessed $_[0] or return $_[0];
   if (index(($_ = "$_[0]"), $ref) != 0) {
     return $_;
   };

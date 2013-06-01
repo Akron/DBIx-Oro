@@ -18,6 +18,7 @@ t/14-Synopsis.t
 t/15-SQL-as-scalar.t
 t/16-list.t
 t/17-junctions.t
+t/18-stringification.t
 t/666-Bobby-Tables.t
 t/DBTestSuite.pm
 Changes
