@@ -2,7 +2,7 @@ package DBIx::Oro;
 use strict;
 use warnings;
 
-our $VERSION = '0.29_7';
+our $VERSION = '0.29_8';
 
 # See the bottom of this file for the POD documentation.
 
@@ -1295,11 +1295,15 @@ sub DESTROY {
     $self->_password(0);
 
     # Delete cached kids
-    my $kids = $self->{dbh}->{CachedKids};
-    %$kids = () if $kids;
+    if (blessed $self->{dbh}) {
+      local $SIG{__WARN__} = \&_no_warn;
+      my $kids = $self->{dbh}->{CachedKids};
+      %$kids = () if $kids;
+    };
 
     # Disconnect
-    $self->{dbh}->disconnect unless $self->{dbh}->{Kids};
+    # $self->{dbh}->disconnect unless $self->{dbh}->{Kids};
+    $self->{dbh}->disconnect;
 
     # Delete parameters
     delete $self->{$_} foreach qw/dbh on_connect _connect_cb/;
@@ -2052,6 +2056,9 @@ sub _q {
   # Return value
   $s;
 };
+
+# Empty code ref
+sub _no_warn {};
 
 
 1;
