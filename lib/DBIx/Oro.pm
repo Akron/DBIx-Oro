@@ -56,9 +56,9 @@ our $OP_REGEX = qr/^(?i:
 		     (?:eq|ne|[gl][te]|not)
 		   )$/x;
 
-our $KEY_REGEX = qr/[_\.0-9a-zA-Z]+/;
+our $KEY_REGEX = qr/`?[_\.0-9a-zA-Z]+`?/;
 
-our $KEY_REGEX_NOPREF = qr/[_0-9a-zA-Z]+/;
+our $KEY_REGEX_NOPREF = qr/`?[_0-9a-zA-Z]+`?/;
 
 our $NUM_RE = qr/^\s*(\d+)\s*$/;
 
@@ -348,7 +348,7 @@ sub insert {
     };
 
     $sql .= 'INTO ' . $table .
-      ' (' . join(', ', @keys) . ') VALUES (' . _q(\@values) . ')';
+      ' (' . join(', ', map { "`$_`" } @keys) . ') VALUES (' . _q(\@values) . ')';
 
     # Prepare and execute
     return scalar $self->prep_and_exec( $sql, \@values );
@@ -382,7 +382,7 @@ sub insert {
     unshift(@keys, @default_keys);
 
     my $sql .= 'INSERT INTO ' . $table .
-      ' (' . join(', ', @keys) . ') ' .
+      ' (' . join(', ',  map { "`$_`" } @keys) . ') ' .
 	'VALUES ';
 
     # Add data in brackets
@@ -1615,7 +1615,7 @@ sub _get_pairs {
     if (substr($key, 0, 1) ne '-') {
 
       # Get alias
-      $key = exists $alias->{$key} ? $alias->{$key} : $key;
+      $key = exists $alias->{$key} ? $alias->{$key} : (index($key, '.') >= 0 ? $key : '`' . $key . '`');
 
       # Equality
       unless (ref $value) {

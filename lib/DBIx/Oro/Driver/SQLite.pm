@@ -297,7 +297,7 @@ sub insert {
     };
 
     $sql .= 'INTO ' . $table .
-      ' (' . join(', ', @keys) . ') VALUES (' . DBIx::Oro::_q(\@values) . ')';
+      ' (' . join(', ', map { "`$_`" } @keys) . ') VALUES (' . DBIx::Oro::_q(\@values) . ')';
 
     # Prepare and execute
     my $rv = $self->prep_and_exec( $sql, \@values );
@@ -335,7 +335,7 @@ sub insert {
     # Unshift default keys to front
     unshift(@keys, @default_keys);
 
-    my $sql = 'INSERT INTO ' . $table . ' (' . join(', ', @keys) . ') ';
+    my $sql = 'INSERT INTO ' . $table . ' (' . join(', ', map { "`$_`" } @keys) . ') ';
     my $union = 'SELECT ' . DBIx::Oro::_q(\@keys);
 
     # Maximum bind variables
