@@ -47,7 +47,7 @@ our @CARP_NOT;
 # Database connection
 use DBI;
 
-our $AS_REGEX = qr/(?::~?[-_a-zA-Z0-9]+)/;
+our $AS_REGEX = qr/(?::~?`?[-_a-zA-Z0-9]+`?)/;
 
 our $OP_REGEX = qr/^(?i:
 		     (?:[\<\>\!=]?\=?)|<>|
