@@ -2630,9 +2630,9 @@ B<Caching is EXPERIMENTAL and may change without warnings.>
 
 =head2 load
 
-  my $user  = $oro->load(Person, { id => 4 });
-  my $user  = $oro->load(Person, ['name'], { id => 4 });
-  my $count = $oro->load(Person, ['count(*):persons']);
+  my $user  = $oro->load(Person => { id => 4 });
+  my $user  = $oro->load(Person => ['name'], { id => 4 });
+  my $count = $oro->load(Person => ['count(*):persons']);
 
 Returns a single hash reference of a given table,
 that meets a given condition.
