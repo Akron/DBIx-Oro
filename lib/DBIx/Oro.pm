@@ -2,7 +2,7 @@ package DBIx::Oro;
 use strict;
 use warnings;
 
-our $VERSION = '0.30_1';
+our $VERSION = '0.30_2';
 
 # See the bottom of this file for the POD documentation.
 
@@ -635,6 +635,9 @@ sub select {
 sub list {
   my $self = shift;
 
+  # Get callback
+  my $cb = pop if ref $_[-1] && ref $_[-1] eq 'CODE';
+
   # Get param hash reference
   my $param = pop if ref $_[-1] && ref $_[-1] eq 'HASH';
 
@@ -642,7 +645,6 @@ sub list {
   $self = $self->table( @_ ) if $_[0];
 
   my (%condition, %pagination);
-
 
   # Check numerical values
   my $start_index = _check_param($param, 'startIndex', 'num') // 0;
@@ -814,7 +816,6 @@ sub list {
 
     # Fields in simple table
     elsif (@fields) {
-
       # Just prepend field to select
       $filter{fields} = \@fields;
       $entry = $self->select(\@fields, { %condition, %pagination });
@@ -823,6 +824,13 @@ sub list {
     # No fields
     else {
       $entry = $self->select({ %condition, %pagination });
+    };
+
+    # Use callback for each entry
+    if ($cb && @$entry) {
+      my @entry_cb;
+      push( @entry_cb, $cb->($_) ) foreach @$entry;
+      $entry = \@entry_cb;
     };
   };
 
@@ -2657,7 +2665,6 @@ aliases for the field names.
     count => 20
   });
 
-
 Returns a response hash based on queries as specified in
 L<OpenSearch|http://www.opensearch.org/Specifications/OpenSearch/1.1#OpenSearch_1.1_parameters>
 and L<PortableContacts|http://portablecontacts.net/draft-spec.html>.
@@ -2723,6 +2730,9 @@ fields to be returned. Defaults to all fields.
 
 In addition to that, the caching system can be applied as with L<select|/select>.
 
+A final callback function can be used to modify  each entry in the
+same way as with L<select|/select>.
+
 The created response is a hash reference with the following structure:
 
   #  {
@@ -2735,6 +2745,9 @@ The created response is a hash reference with the following structure:
   #      { name => 'Peter', age => 30 }
   #    ]
   #  }
+
+The objects in the entry array can be different, depending on
+the optionally passed callback function.
 
 All valid parameters are returned, including the C<totalResults> value,
 giving the number of elements in the non-filtered result set.
@@ -2921,7 +2934,7 @@ L<DBD::SQLite>.
 
 =head1 INSTALL
 
-When not installing via a package manager, CPAN or cpanm,
+When not installing via a package manager, CPAN, cpanm or similar,
 you can install Oro manually, using
 
   $ perl Makefile.PL

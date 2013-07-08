@@ -511,6 +511,49 @@ is($list->{entry}->[3]->{sex},'male', 'sex');
 is($list->{entry}->[4]->{sex},'female', 'sex');
 is($list->{entry}->[5]->{sex},'female', 'sex');
 
+$list = $table->list({
+  filterBy => 'surname',
+  filterOp => 'STARTSWITH',
+  filterValue => 'W',
+  sortBy => 'surname',
+  sortOrder => 'descending',
+  fields => 'surname,age, sex '
+} => sub {
+    my $row = shift;
+    my @array;
+    foreach (qw/surname age sex/) {
+      push(@array, $row->{$_});
+    };
+    return \@array;
+  });
+
+is($list->{totalResults}, 6, 'totalResults');
+is($list->{itemsPerPage}, 25, 'itemsperpage');
+is($list->{sortBy}, 'surname', 'sort by');
+is($list->{sortOrder}, 'descending', 'sort order');
+is($list->{fields}->[0], 'surname', 'fields');
+is($list->{fields}->[1], 'age', 'fields');
+is($list->{fields}->[2], 'sex', 'fields');
+is($list->{entry}->[0]->[0], 'Wright', 'surname');
+is($list->{entry}->[1]->[0], 'Wood', 'surname');
+is($list->{entry}->[2]->[0], 'Wilson', 'surname');
+is($list->{entry}->[3]->[0], 'Williams', 'surname');
+is($list->{entry}->[4]->[0], 'White', 'surname');
+is($list->{entry}->[5]->[0], 'Walker', 'surname');
+is($list->{entry}->[0]->[1], 40, 'age');
+is($list->{entry}->[1]->[1], 38, 'age');
+is($list->{entry}->[2]->[1], 36, 'age');
+is($list->{entry}->[3]->[1], 35, 'age');
+ok(!$list->{entry}->[4]->[1], 'age');
+is($list->{entry}->[5]->[1], 33, 'age');
+is($list->{entry}->[0]->[2],'male', 'sex');
+is($list->{entry}->[1]->[2],'female', 'sex');
+is($list->{entry}->[2]->[2],'male', 'sex');
+is($list->{entry}->[3]->[2],'male', 'sex');
+is($list->{entry}->[4]->[2],'female', 'sex');
+is($list->{entry}->[5]->[2],'female', 'sex');
+
+
 # Unknown table
 no_warn {
   $list = $oro->list('Name2' => {
