@@ -588,7 +588,6 @@ aliases for the field names.
     count => 20
   });
 
-
 Returns a response hash based on queries as specified in
 L<OpenSearch|http://www.opensearch.org/Specifications/OpenSearch/1.1#OpenSearch_1.1_parameters>
 and L<PortableContacts|http://portablecontacts.net/draft-spec.html>.
@@ -654,6 +653,9 @@ fields to be returned. Defaults to all fields.
 
 In addition to that, the caching system can be applied as with L<select|/select>.
 
+A final callback function can be used to modify  each entry in the
+same way as with L<select|/select>.
+
 The created response is a hash reference with the following structure:
 
   #  {
@@ -666,6 +668,9 @@ The created response is a hash reference with the following structure:
   #      { name => 'Peter', age => 30 }
   #    ]
   #  }
+
+The objects in the entry array can be different, depending on
+the optionally passed callback function.
 
 All valid parameters are returned, including the C<totalResults> value,
 giving the number of elements in the non-filtered result set.
@@ -852,7 +857,7 @@ L<DBD::SQLite>.
 
 =head1 INSTALL
 
-When not installing via a package manager, CPAN or cpanm,
+When not installing via a package manager, CPAN, cpanm or similar,
 you can install Oro manually, using
 
   $ perl Makefile.PL

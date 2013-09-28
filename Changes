@@ -3,6 +3,8 @@
 	  - Escape fields by default.
         - 0.30_2
 	  - Add callback support for list method.
+	- 0.30_3
+	  - Fix bug on empty inserts.
 
 0.29 2013-06-02
         - 0.29_1

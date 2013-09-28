@@ -2,7 +2,7 @@ package DBIx::Oro;
 use strict;
 use warnings;
 
-our $VERSION = '0.30_2';
+our $VERSION = '0.30_3';
 
 # See the bottom of this file for the POD documentation.
 
@@ -62,7 +62,6 @@ our $KEY_REGEX_NOPREF = qr/`?[_0-9a-zA-Z]+`?/;
 
 our $NUM_RE = qr/^\s*(\d+)\s*$/;
 
-
 our $SFIELD_REGEX =
   qr/(?:$KEY_REGEX|(?:$KEY_REGEX\.)?\*|"[^"]*"|'[^']*')/;
 
@@ -86,7 +85,6 @@ our $CACHE_COMMENT = 'From Cache';
 our $ITEMS_PER_PAGE = 25;
 
 our @EXTENSIONS = ();
-
 
 # Import extension
 sub import {
@@ -334,6 +332,9 @@ sub insert {
       push @keys,   $key;
       push @values, _stringify($value);
    };
+
+    # Nothing to insert
+    return unless @keys;
 
     # Create insert string
     my $sql = 'INSERT ';

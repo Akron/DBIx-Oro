@@ -284,6 +284,9 @@ sub insert {
       push @values, $value;
     };
 
+    # Nothing to insert
+    return unless @keys;
+
     # Create insert string
     my $sql = 'INSERT ';
 
