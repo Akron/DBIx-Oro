@@ -2384,8 +2384,11 @@ Scalar condition values will be inserted, if the fields do not exist.
 Returns an array reference of rows as hash references of a given table,
 that meet a given condition.
 
-Expects the table name of the selection and optionally an array reference
-of fields, optionally a hash reference with conditions, junctions and restrictions
+Expects the table name of the selection
+(or a L<joined table|/Joined Tables>)
+and optionally an array reference
+of fields, optionally a hash reference with conditions, L<junctions|/Junctions>,
+and SQL specific L<restrictions|Restrictions>
 all rows have to fulfill, and optionally a callback,
 which is released after each row, passing the row as a hash reference.
 
@@ -2397,244 +2400,15 @@ In case of array references, it is tested, if the field value is an element of t
 if the first element is a scalar reference, the string is taken as SQL directly and all
 following elements are parameters.
 In case of scalar references, the string is taken as SQL directly.
-In case of hash references, the keys of the hash represent operators to
-test with (see L<below|/Operators>).
+In case of hash references, the keys of the hash represent L<operators|/Operators> to
+test with.
 
 Fields can be column names or SQL functions.
 With a colon you can define aliases of field names,
 like with C<count(field):field_count>.
+For preprocessing field values special L<treatments|/Treatments> can be applied.
 
 B<The callback is EXPERIMENTAL and may change without warnings.>
-
-
-=head3 Operators
-
-When checking with hash references, several operators are supported.
-
-  my $users = $oro->select(
-    Person => {
-      name => {
-        like     => '%e%',
-        not_glob => 'M*'
-      },
-      age => {
-        between => [18, 48],
-        ne      => 30,
-        not     => [45,46]
-      }
-    }
-  );
-
-Supported operators are C<E<lt> (lt)>, C<E<gt> (gt)>, C<= (eq)>,
-C<E<lt>= (le)>, C<E<gt>= (ge)>, C<!= (ne)>.
-String comparison operators like C<like> and similar are supported.
-To negate the latter operators you can prepend C<not_>.
-The C<between> and C<not_between> operators are special as they expect
-a two value array reference as their operand. The single C<not> operator
-accepts an array reference as a set and is true, if the value is not
-element of the set.
-To test for existence, use C<value =E<gt> { not =E<gt> undef }>.
-
-Multiple operators for checking with the same column are supported.
-
-B<Operators are EXPERIMENTAL and may change without warnings.>
-
-
-=head3 Junctions
-
-By using a hash reference for conditions, the ordering of the condition is random.
-In case of C<AND> conjunctions, ordering is semantically irrelevant, however
-sometimes database queries benefit from certain orders. Junctions help to
-force the ordering and grouping of conditions and enables to create C<OR> disjunctions.
-
-  my $users = $oro->select(
-    Person => {
-      -or => [
-        { name => { like => '%e%' }},
-        { age => 40 },
-        {
-          -and => [
-            place => 'Springfield',
-            gender => 'undecided'
-          ]
-        }
-      ]
-    }
-  );
-
-The junctions C<or> and C<and> are prepended with a minus and need an array
-reference with either condition pairs or hash references containing conditions.
-The order of the conditions will stay intact. Junctions can be nested.
-
-B<Conjunctions are EXPERIMENTAL and may change without warnings.>
-
-
-=head3 Restrictions
-
-In addition to conditions, the selection can be restricted by using
-special restriction parameters, all prepended by a C<-> symbol
-in the top hash reference:
-
-  my $users = $oro->select(
-    Person => {
-      -order    => ['-age','name'],
-      -group    => [ age => { age => { gt => 42 } } ]
-      -offset   => 1,
-      -limit    => 5,
-      -distinct => 1
-    }
-  );
-
-=over 2
-
-=item
-
-C<-order>
-
-Sorts the result set by field names.
-Field names can be scalars or array references of field names ordered
-by priority.
-A leading minus of the field name will use descending,
-otherwise ascending order.
-
-=item
-
-C<-group>
-
-Groups the result set by field names.
-Especially useful with aggregation operators like C<count()>.
-Field names can be scalars or array references of field names ordered
-by priority.
-In case of an array reference, the final element can be a hash
-reference, giving a C<having> condition.
-
-=item
-
-C<-limit>
-
-Limits the number of rows in the result set.
-
-=item
-
-C<-offset>
-
-Sets the offset of the result set.
-
-=item
-
-C<-distinct>
-
-Boolean value. If set to a true value, only distinct rows are returned.
-
-=back
-
-Restrictions can not be nested in L<junctions|/Junctions>.
-
-
-=head3 Joined Tables
-
-Instead of preparing a select on only one table, it's possible to
-use any number of tables and perform a simple equi-join:
-
-  $oro->select(
-    [
-      Person =>    ['name:author', 'age'] => { id => 1 },
-      Book =>      ['title'] => { author_id => 1, publisher_id => 2 },
-      Publisher => ['name:publisher', 'id:pub_id'] => { id => 2 }
-    ] => {
-      author => 'Akron'
-    }
-  );
-
-Join-Selects accept an array reference with a sequence of
-table names, optional field array references and optional hash references
-containing numerical markers for the join.
-If the field array reference is not given, all columns of the
-table are selected. If the array reference is empty, no columns of the
-table are selected.
-
-With a colon you can define aliases for the field names.
-
-The join marker hash reference has field names as keys
-and numerical markers or array references including numerical markers as values.
-Fields with identical markers greater or equal than C<0> will have
-identical content, fields with identical markers littler than C<0>
-will have different content.
-
-After the join table array reference, the optional hash
-reference with conditions, junctions and restrictions and an optional
-callback may follow.
-
-B<Joins are EXPERIMENTAL and may change without warnings.>
-
-
-=head3 Treatments
-
-Sometimes field functions and returned values shall be treated
-in a special way.
-By handing over subroutines, L<select|/select> as well as L<load|/load> allow
-for these treatments.
-
-
-  my $name = sub {
-    return ('name', sub { uc $_[0] });
-  };
-  $oro->select(Person => ['age', [ $name => 'name'] ]);
-
-
-This example returns all values in the C<name> column in uppercase.
-Treatments are array references in the field array, with the first
-element being a treatment subroutine reference and the second element
-being the alias of the column.
-
-The treatment subroutine returns a field value (an SQL string),
-optionally an anonymous subroutine that is executed after each
-returned value, and optionally an array of values to pass to the inner
-subroutine.
-The first parameter the inner subroutine has to handle
-is the value to treat, following the optional treatment parameters.
-The treatment returns the treated value (that does not have to be a string).
-
-Outer subroutines are executed as long as the first value is not a string
-value. The only parameter passed to the outer subroutine is the
-current table name.
-
-See the L<SQLite Driver|DBIx::Oro::Driver::SQLite> for examples of treatments.
-
-B<Treatments are HEAVILY EXPERIMENTAL and may change without warnings.>
-
-
-=head3 Caching
-
-  use CHI;
-  my $hash = {};
-  my $cache = CHI->new(
-    driver => 'Memory',
-    datastore => $hash
-  );
-
-  my $users = $oro->select(
-    Person => {
-      -cache => {
-        chi        => $cache,
-        key        => 'all_persons',
-        expires_in => '10 min'
-      }
-    }
-  );
-
-Selected results can be directly cached by using the C<-cache>
-keyword. It accepts a hash reference with the parameter C<chi>
-containing the cache object and C<key> containing the key
-for caching. If no key is given, the SQL statement is used
-as the key. All other parameters are transferred to the C<set>
-method of the cache.
-
-B<Note:> Although the parameter is called C<chi>, all caching
-objects granting the limited functionalities of C<set> and C<get>
-methods are valid (e.g., L<Cache::Cache>, L<Mojo::Cache>).
-
-B<Caching is EXPERIMENTAL and may change without warnings.>
 
 
 =head2 load
@@ -2646,16 +2420,21 @@ B<Caching is EXPERIMENTAL and may change without warnings.>
 Returns a single hash reference of a given table,
 that meets a given condition.
 
-Expects the table name of selection, an optional array reference of fields
+Expects the table name of selection (or a L<joined table|/Joined Tables>),
+an optional array reference of fields
 to return and a hash reference with conditions, the rows have to fulfill.
 Normally this will include the primary key.
-Junctions, restrictions, as well as the caching system can be applied as with
-L<select|/select>.
+L<Operators|/Operators>, L<Junctions|/junctions>, L<restrictions|/Restrictons>,
+L<treatments|/Treatments> as well as the L<caching system|/Caching> can be applied
+as with L<select|/select>.
 In case of scalar values, identity is tested.
 In case of array references, it is tested, if the field value is an
 element of the set.
 Fields can be column names or functions. With a colon you can define
 aliases for the field names.
+For preprocessing field values special L<treatments|/Treatments> can be applied.
+
+Results may be L<cached/Caching>.
 
 
 =head2 list
@@ -2812,10 +2591,11 @@ Returns the number of rows that were deleted.
 Returns a new Oro object with a predefined table or joined tables.
 
 Allows to omit the first table argument for the methods
-L<select|/select>, L<load|/load>, L<list|/list>, L<count|/count> and - in case of non-joined-tables -
+L<select|/select>, L<load|/load>, L<list|/list>,
+L<count|/count> and - in case of non-joined-tables -
 for L<insert|/insert>, L<update|/update>, L<merge|/merge>, and L<delete|/delete>.
 
-In conjunction with a joined table this can be seen as an I<ad hoc view>.
+In conjunction with a L<joined table|/Joined Tables> this can be seen as an I<ad hoc view>.
 
 B<This method is EXPERIMENTAL and may change without warnings.>
 
@@ -2895,6 +2675,241 @@ Accepts the SQL statement, parameters for binding in an array
 reference and optionally a boolean value, if the prepared
 statement should be cached by L<DBI>.
 
+=head1 RETRIEVAL OPTIONS
+
+When retrieving data using L<select> or L<load>,
+the behaviour can further be defined using the following mechanisms.
+
+
+=head2 Operators
+
+When checking with hash references, several operators are supported.
+
+  my $users = $oro->select(
+    Person => {
+      name => {
+        like     => '%e%',
+        not_glob => 'M*'
+      },
+      age => {
+        between => [18, 48],
+        ne      => 30,
+        not     => [45,46]
+      }
+    }
+  );
+
+Supported operators are C<E<lt> (lt)>, C<E<gt> (gt)>, C<= (eq)>,
+C<E<lt>= (le)>, C<E<gt>= (ge)>, C<!= (ne)>.
+String comparison operators like C<like> and similar are supported.
+To negate the latter operators you can prepend C<not_>.
+The C<between> and C<not_between> operators are special as they expect
+a two value array reference as their operand. The single C<not> operator
+accepts an array reference as a set and is true, if the value is not
+element of the set.
+To test for existence, use C<value =E<gt> { not =E<gt> undef }>.
+
+Multiple operators for checking with the same column are supported.
+
+B<Operators are EXPERIMENTAL and may change without warnings.>
+
+
+=head2 Junctions
+
+By using a hash reference for conditions, the ordering of the condition is random.
+In case of C<AND> conjunctions, ordering is semantically irrelevant, however
+sometimes database queries benefit from certain orders. Junctions help to
+force the ordering and grouping of conditions and enables to create C<OR> disjunctions.
+
+  my $users = $oro->select(
+    Person => {
+      -or => [
+        { name => { like => '%e%' }},
+        { age => 40 },
+        {
+          -and => [
+            place => 'Springfield',
+            gender => 'undecided'
+          ]
+        }
+      ]
+    }
+  );
+
+The junctions C<or> and C<and> are prepended with a minus and need an array
+reference with either condition pairs or hash references containing conditions.
+The order of the conditions will stay intact. Junctions can be nested.
+
+B<Conjunctions are EXPERIMENTAL and may change without warnings.>
+
+
+=head2 Restrictions
+
+In addition to conditions, the selection can be restricted by using
+special restriction parameters, all prepended by a C<-> symbol
+in the top hash reference:
+
+  my $users = $oro->select(
+    Person => {
+      -order    => ['-age','name'],
+      -group    => [ age => { age => { gt => 42 } } ]
+      -offset   => 1,
+      -limit    => 5,
+      -distinct => 1
+    }
+  );
+
+=over 2
+
+=item
+
+C<-order>
+
+Sorts the result set by field names.
+Field names can be scalars or array references of field names ordered
+by priority.
+A leading minus of the field name will use descending,
+otherwise ascending order.
+
+=item
+
+C<-group>
+
+Groups the result set by field names.
+Especially useful with aggregation operators like C<count()>.
+Field names can be scalars or array references of field names ordered
+by priority.
+In case of an array reference, the final element can be a hash
+reference, giving a C<having> condition.
+
+=item
+
+C<-limit>
+
+Limits the number of rows in the result set.
+
+=item
+
+C<-offset>
+
+Sets the offset of the result set.
+
+=item
+
+C<-distinct>
+
+Boolean value. If set to a true value, only distinct rows are returned.
+
+=back
+
+Restrictions can not be nested in L<junctions|/Junctions>.
+
+
+=head2 Joined Tables
+
+Instead of preparing a select on only one table, it's possible to
+use any number of tables and perform a simple equi-join:
+
+  $oro->select(
+    [
+      Person =>    ['name:author', 'age'] => { id => 1 },
+      Book =>      ['title'] => { author_id => 1, publisher_id => 2 },
+      Publisher => ['name:publisher', 'id:pub_id'] => { id => 2 }
+    ] => {
+      author => 'Akron'
+    }
+  );
+
+Join-Selects accept an array reference with a sequence of
+table names, optional field array references and optional hash references
+containing numerical markers for the join.
+If the field array reference is not given, all columns of the
+table are selected. If the array reference is empty, no columns of the
+table are selected.
+
+With a colon you can define aliases for the field names.
+
+The join marker hash reference has field names as keys
+and numerical markers or array references including numerical markers as values.
+Fields with identical markers greater or equal than C<0> will have
+identical content, fields with identical markers littler than C<0>
+will have different content.
+
+After the join table array reference, the optional hash
+reference with conditions, junctions and restrictions and an optional
+callback may follow.
+
+B<Joins are EXPERIMENTAL and may change without warnings.>
+
+
+=head2 Treatments
+
+Sometimes field functions and returned values shall be treated
+in a special way.
+By handing over subroutines, L<select|/select> as well as L<load|/load> allow
+for these treatments.
+
+
+  my $name = sub {
+    return ('name', sub { uc $_[0] });
+  };
+  $oro->select(Person => ['age', [ $name => 'name'] ]);
+
+
+This example returns all values in the C<name> column in uppercase.
+Treatments are array references in the field array, with the first
+element being a treatment subroutine reference and the second element
+being the alias of the column.
+
+The treatment subroutine returns a field value (an SQL string),
+optionally an anonymous subroutine that is executed after each
+returned value, and optionally an array of values to pass to the inner
+subroutine.
+The first parameter the inner subroutine has to handle
+is the value to treat, following the optional treatment parameters.
+The treatment returns the treated value (that does not have to be a string).
+
+Outer subroutines are executed as long as the first value is not a string
+value. The only parameter passed to the outer subroutine is the
+current table name.
+
+See the L<SQLite Driver|DBIx::Oro::Driver::SQLite> for examples of treatments.
+
+B<Treatments are HEAVILY EXPERIMENTAL and may change without warnings.>
+
+
+=head2 Caching
+
+  use CHI;
+  my $hash = {};
+  my $cache = CHI->new(
+    driver => 'Memory',
+    datastore => $hash
+  );
+
+  my $users = $oro->select(
+    Person => {
+      -cache => {
+        chi        => $cache,
+        key        => 'all_persons',
+        expires_in => '10 min'
+      }
+    }
+  );
+
+Selected results can be directly cached by using the C<-cache>
+keyword. It accepts a hash reference with the parameter C<chi>
+containing the cache object and C<key> containing the key
+for caching. If no key is given, the SQL statement is used
+as the key. All other parameters are transferred to the C<set>
+method of the cache.
+
+B<Note:> Although the parameter is called C<chi>, all caching
+objects granting the limited functionalities of C<set> and C<get>
+methods are valid (e.g., L<Cache::Cache>, L<Mojo::Cache>).
+
+B<Caching is EXPERIMENTAL and may change without warnings.>
+
 
 =head1 EVENTS
 
@@ -2929,6 +2944,7 @@ B<This event is EXPERIMENTAL and may change without warnings.>
 
 =head1 DEPENDENCIES
 
+Perl 5.10.1 (or higher),
 L<DBI>,
 L<DBD::SQLite>.
 
@@ -2975,7 +2991,7 @@ to L<SQL::Abstract>, written by Nathan Wiger et al.
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2011-2013, L<Nils Diewald|http://nils-diewald.de/>.
+Copyright (C) 2011-2014, L<Nils Diewald|http://nils-diewald.de/>.
 
 This program is free software, you can redistribute it
 and/or modify it under the same terms as Perl.
