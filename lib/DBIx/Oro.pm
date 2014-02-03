@@ -2,7 +2,7 @@ package DBIx::Oro;
 use strict;
 use warnings;
 
-our $VERSION = '0.30_3';
+our $VERSION = '0.30_4';
 
 # See the bottom of this file for the POD documentation.
 
@@ -2161,7 +2161,7 @@ DBIx::Oro - Simple Relational Database Accessor
   # 'Seems to work!'
 
   # Create joined tables
-  my $join = $oro2->table([
+  my $join = $oro->table([
     User => ['name'] => { id => 1 },
     Post => ['msg']  => { user_id => 1 }
   ]);

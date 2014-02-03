@@ -6,6 +6,8 @@
 	- 0.30_3
 	  - Fix bug on empty inserts.
 	  - Improved documentation.
+	- 0.30_4
+	  - Fixed bug in documentation.
 
 0.29 2013-06-02
         - 0.29_1
