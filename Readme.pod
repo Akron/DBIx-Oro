@@ -83,7 +83,7 @@ DBIx::Oro - Simple Relational Database Accessor
   # 'Seems to work!'
 
   # Create joined tables
-  my $join = $oro2->table([
+  my $join = $oro->table([
     User => ['name'] => { id => 1 },
     Post => ['msg']  => { user_id => 1 }
   ]);
@@ -251,9 +251,7 @@ is EXPERIMENTAL and may change without warnings.
 Updates values of an existing row of a given table.
 
 Expects the table name to update, a hash reference of values to update,
-and optionally a hash reference with conditions, the rows have to fulfill.
-In case of scalar values, identity is tested. In case of array references,
-it is tested, if the field value is an element of the set.
+and optionally a hash reference with L<conditions|/Conditions>, the rows have to fulfill.
 
 Returns the number of rows affected.
 
@@ -266,12 +264,10 @@ Updates values of an existing row of a given table,
 otherwise inserts them (so called I<upsert>).
 
 Expects the table name to update or insert, a hash reference of
-values to update or insert, and optionally a hash reference with conditions,
+values to update or insert, and optionally a hash reference with L<conditions|/Conditions>,
 the rows have to fulfill.
-In case of scalar values, identity is tested. In case of array references,
-it is tested, if the field value is an element of the set.
 
-Scalar condition values will be inserted, if the fields do not exist.
+Scalar condition values will be inserted, if the field values do not exist.
 
 
 =head2 select
@@ -300,7 +296,7 @@ Scalar condition values will be inserted, if the fields do not exist.
           print $_->{id}, "\n";
           $age += $_->{age};
           return -1 if $age >= 100;
-    });
+        });
 
 
 Returns an array reference of rows as hash references of a given table,
@@ -309,21 +305,13 @@ that meet a given condition.
 Expects the table name of the selection
 (or a L<joined table|/Joined Tables>)
 and optionally an array reference
-of fields, optionally a hash reference with conditions, L<junctions|/Junctions>,
-and SQL specific L<restrictions|Restrictions>
+of fields, optionally a hash reference with L<conditions|/Conditions>,
+L<junctions|/Junctions>, and SQL specific L<restrictions|Restrictions>
 all rows have to fulfill, and optionally a callback,
 which is released after each row, passing the row as a hash reference.
 
 If a callback is given, the method has no return value.
 If the callback returns -1, the data fetching is aborted.
-
-In case of scalar values, identity is tested for the condition.
-In case of array references, it is tested, if the field value is an element of the set or,
-if the first element is a scalar reference, the string is taken as SQL directly and all
-following elements are parameters.
-In case of scalar references, the string is taken as SQL directly.
-In case of hash references, the keys of the hash represent L<operators|/Operators> to
-test with.
 
 Fields can be column names or SQL functions.
 With a colon you can define aliases of field names,
@@ -344,19 +332,13 @@ that meets a given condition.
 
 Expects the table name of selection (or a L<joined table|/Joined Tables>),
 an optional array reference of fields
-to return and a hash reference with conditions, the rows have to fulfill.
+to return and a hash reference with L<conditions|/Conditions>, the rows have to fulfill.
 Normally this will include the primary key.
-L<Operators|/Operators>, L<Junctions|/junctions>, L<restrictions|/Restrictons>,
+L<Junctions|/Junctions>, L<restrictions|/Restrictons>,
 L<treatments|/Treatments> as well as the L<caching system|/Caching> can be applied
 as with L<select|/select>.
-In case of scalar values, identity is tested.
-In case of array references, it is tested, if the field value is an
-element of the set.
 Fields can be column names or functions. With a colon you can define
 aliases for the field names.
-For preprocessing field values special L<treatments|/Treatments> can be applied.
-
-Results may be L<cached/Caching>.
 
 
 =head2 list
@@ -479,11 +461,12 @@ Caching can be applied as with L<select|/select>.
 Deletes rows of a given table, that meet a given condition.
 
 Expects the table name of selection and optionally a hash reference
-with conditions, junctions and restrictions, the rows have to fulfill.
+with conditions, L<junctions|/Junctions> and L<restrictions|/Restrictions>,
+the rows have to fulfill.
 In case of scalar values, identity is tested for the condition.
 In case of array references, it is tested, if the field value is an
 element of the set.
-Junctions and restrictions can be applied as with L<select|/select>.
+L<Junctions|/Junctions> and L<restrictions|/Restrictions> can be applied as with L<select|/select>.
 
 Returns the number of rows that were deleted.
 
@@ -597,15 +580,34 @@ Accepts the SQL statement, parameters for binding in an array
 reference and optionally a boolean value, if the prepared
 statement should be cached by L<DBI>.
 
+
 =head1 RETRIEVAL OPTIONS
 
 When retrieving data using L<select> or L<load>,
 the behaviour can further be defined using the following mechanisms.
 
 
-=head2 Operators
+=head2 Conditions
 
-When checking with hash references, several operators are supported.
+Several conditions can by applied to the set of results of the methods
+L<select|/select>, L<load|/load>, L<merge|/merge>, L<update|/update>,
+L<count|/count> and L<delete|/delete>.
+
+  my $users = $oro->select('Person');
+  $users = $oro->select(Person => {
+    age     => 24,
+    address => { like => '%e%' },
+    name    => ['Daniel', 'Sabine'],
+    rights  => [\"SELECT right FROM Rights WHERE right = ?", 2]
+  });
+
+In case of scalar values, identity is tested for the condition.
+In case of array references, it is tested, if the field value is an element of the set or,
+if the first element is a scalar reference, the string is taken as SQL directly and all
+following elements are parameters.
+In case of scalar references, the string is taken as SQL directly.
+In case of hash references, the keys of the hash represent operators to
+test with. There are several operators supported.
 
   my $users = $oro->select(
     Person => {
