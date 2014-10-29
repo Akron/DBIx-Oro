@@ -148,9 +148,10 @@ my $join = $oro2->table([
 ]);
 
 # Select on joined tables
-$join->select({ name => 'Akron', msg => { not_glob => 'And*'}, -limit => 2 } => sub {
-		ok($_->{name}. ': '. $_->{msg}. "\n", 'Messages');
-});
+my $x = $join->select({ name => 'Akron', msg => { not_glob => 'And*'}, -limit => 2 });
+ok($x->[0]->{name}. ': '. $x->[0]->{msg}. "\n", 'Messages');
+ok($x->[1]->{name}. ': '. $x->[1]->{msg}. "\n", 'Messages');
+
 # Akron: Hello World!
 # Akron: I can insert bulk messages ...
 

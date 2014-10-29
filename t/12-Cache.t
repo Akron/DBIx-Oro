@@ -102,10 +102,10 @@ $result = $oro->select(Name => {
     chi => $chi,
     key => 'Contains e'
   }
-} => sub {
-  my $row = shift;
-  like($row->{prename}, qr/^(?:Michael|Peter|Sabine)$/, 'Name');
 });
+
+like($result->[0]->{prename}, qr/^(?:Michael|Peter|Sabine)$/, 'Name');
+
 
 ($last_sql, $last_sql_cache) = $oro->last_sql;
 ok($last_sql_cache, 'From Cache 2');
@@ -116,10 +116,9 @@ $result = $oro->select(Name => {
     chi => $chi,
     key => 'Contains e with like'
   }
-} => sub {
-  my $row = shift;
-  like($row->{prename}, qr/^(?:Michael|Peter|Sabine)$/, 'Name 2');
 });
+
+like($result->[0]->{prename}, qr/^(?:Michael|Peter|Sabine)$/, 'Name 2');
 
 ($last_sql, $last_sql_cache) = $oro->last_sql;
 ok(!$last_sql_cache, 'Not from Cache 3');
@@ -132,10 +131,9 @@ $result = $oro->select(Name => {
     chi => $chi,
     key => 'Contains e with like'
   }
-} => sub {
-  my $row = shift;
-  like($row->{prename}, qr/^(?:Michael|Peter|Sabine)$/, 'Name 3');
 });
+
+like($result->[0]->{prename}, qr/^(?:Michael|Peter|Sabine)$/, 'Name 3');
 
 ($last_sql, $last_sql_cache) = $oro->last_sql;
 ok($last_sql_cache, 'From Cache 4');
@@ -148,11 +146,12 @@ $result = $oro->select(Name => {
     chi => $chi,
     key => 'Contains e with like'
   }
-} => sub {
-  my $row = shift;
-  like($row->{prename}, qr/^(?:Michael|Peter|Sabine)$/, 'Name 4');
-  return $count_result--;
 });
+
+foreach my $row (@$result) {
+  like($row->{prename}, qr/^(?:Michael|Peter|Sabine)$/, 'Name 4');
+  $count_result--;
+};
 
 ($last_sql, $last_sql_cache) = $oro->last_sql;
 ok($last_sql_cache, 'From Cache 5');
@@ -163,25 +162,26 @@ $result = $oro->select(Name => {
   -cache => {
     chi => $chi,
     key => 'No restriction'
-  }
-} => sub {
-  my $row = shift;
-  return $count_result--;
-});
+  }});
+
+foreach my $row (@$result) {
+  $count_result--;
+  next;
+};
 
 ($last_sql, $last_sql_cache) = $oro->last_sql;
 ok(!$last_sql_cache, 'Not from Cache 5');
-is(scalar $chi->get_keys, 2, 'Two keys');
+is(scalar $chi->get_keys, 3, 'Three keys');
 
 $result = $oro->select(Name => {
   -cache => {
     chi => $chi,
     key => 'No restriction'
   }
-} => sub { return; });
+});
 
 ($last_sql, $last_sql_cache) = $oro->last_sql;
-ok(!$last_sql_cache, 'Not from Cache 6');
+ok($last_sql_cache, 'Not from Cache 6');
 is(scalar $chi->get_keys, 3, 'Three keys');
 
 $count_result = 2;
@@ -190,12 +190,8 @@ $result = $oro->select(Name => {
     chi => $chi,
     key => 'No restriction'
   }
-} => sub {
-  my $row = shift;
-  return --$count_result;
 });
 
-is($count_result, -1, 'Count Result');
 ($last_sql, $last_sql_cache) = $oro->last_sql;
 ok($last_sql_cache, 'From Cache 6');
 

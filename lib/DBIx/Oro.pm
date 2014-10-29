@@ -2,9 +2,13 @@ package DBIx::Oro;
 use strict;
 use warnings;
 
-our $VERSION = '0.30_4';
+our $VERSION = '0.31_1';
 
 # See the bottom of this file for the POD documentation.
+
+# Todo: Are combined indices necessarily in the same order?
+#       In that case update and select etc. need ordered
+#       keys!
 
 # Todo: Improve documentation
 #       - =head1 ADVANCED CONCEPTS
@@ -27,8 +31,6 @@ our $VERSION = '0.30_4';
 #        });
 #        (Should raise error)
 # Debug: DBIx::Oro-Treatment in Joint Tables
-# Deprecate: Delete import_sql method and
-#            make it an extension
 # Todo: Support left outer join (Maybe with id => 1, maybe => 1 in join hash)
 # Todo: Create all Queries in DBIx::Oro::Query
 # Todo: To change queries from different drivers,
@@ -36,7 +38,8 @@ our $VERSION = '0.30_4';
 # Todo: Return key -column_order => [] with fetchall_arrayref.
 # Todo: my $value = $oro->value(Table => 'Field') # Ähnlich wie count
 # Todo: Oder my ($value) = $oro->value(Table => Field => { -limit => 1 }) # und es gibt ein Array zurück
-
+# Todo: Check for BDB-support:
+#   http://charlesleifer.com/blog/sqlite-small-fast-reliable-choose-any-three-/
 
 use v5.10.1;
 
@@ -560,6 +563,8 @@ sub select {
   if ($_[0] && ref $_[0] && ref $_[0] eq 'CODE' ) {
     my $cb = shift;
 
+    carp 'Calling select with an iteration callback is deprecated since v0.31';
+
     # Iterate through dbi result
     my ($i, $row) = (0);
     while ($row = $sth ? $sth->fetchrow_hashref : $result->[$i]) {
@@ -799,17 +804,18 @@ sub list {
     if (ref $self->{table} && @fields) {
 
       # Is a joined table, filter fields afterwards
-      $self->select(
-	{ %condition, %pagination } => sub {
-	  my $row = shift;
+      my $select = $self->select({ %condition, %pagination });
 
-	  # Filter
-	  my %new;
-	  foreach (@fields) {
-	    $new{$_} = $row->{$_} if exists $row->{$_};
-	  };
-	  push(@$entry, \%new);
-	});
+      # Iterate for filtering
+      foreach my $row (@$select) {
+
+	# Filter
+	my %new;
+	foreach (@fields) {
+	  $new{$_} = $row->{$_} if exists $row->{$_};
+	};
+	push(@$entry, \%new);
+      };
 
       # Define fields
       $filter{fields} = \@fields;
@@ -1052,7 +1058,7 @@ sub prep_and_exec {
   if ($dbh->err) {
 
     if (index($dbh->errstr, 'database') <= 0) {
-      carp $dbh->errstr . ' in "' . $self->last_sql . '"';
+      carp $dbh->errstr . ' in "' . _trim_last_sql($self->last_sql) . '"';
       return;
     };
 
@@ -1064,7 +1070,7 @@ sub prep_and_exec {
 	$dbh->prepare( $sql );
 
     if ($dbh->err) {
-      carp $dbh->errstr . ' in "' . $self->last_sql . '"';
+      carp $dbh->errstr . ' in "' . _trim_last_sql($self->last_sql) . '"';
       return;
     };
   };
@@ -1077,7 +1083,7 @@ sub prep_and_exec {
 
   # Check for errors
   if ($dbh->err) {
-    carp $dbh->errstr . ' in "' . $self->last_sql . '"';
+    carp $dbh->errstr . ' in "' . _trim_last_sql($self->last_sql) . '"';
     return;
   };
 
@@ -2066,6 +2072,17 @@ sub _q {
   $s;
 };
 
+
+# Trim last_sql message for reporting
+sub _trim_last_sql {
+  my $last_sql = shift;
+
+  if (length($last_sql) > 500) {
+    return substr($last_sql, 0, 497) . ' ...';
+  };
+};
+
+
 # Empty code ref
 sub _no_warn {};
 
@@ -2167,13 +2184,15 @@ DBIx::Oro - Simple Relational Database Accessor
   ]);
 
   # Select on joined tables and send data to a callback
-  $join->select({
+  my $msg = $join->select({
       name   => 'Akron',
       msg    => { not_glob => 'And*' },
       -limit => 2
-    } => sub {
-      print $_->{name}, ': ', $_->{msg}, "\n";
-    });
+  });
+  foreach (@$msg) {
+    print $_->{name}, ': ', $_->{msg}, "\n";
+  };
+
   # Akron: Hello World!
   # Akron: I can insert bulk messages ...
 
@@ -2353,28 +2372,12 @@ Scalar condition values will be inserted, if the field values do not exist.
   my $users = $oro->select('Person');
   $users = $oro->select(Person => ['id', 'name']);
   $users = $oro->select(Person =>
-    ['id'] => {
+    [qw/id age/] => {
       age    => 24,
       name   => ['Daniel', 'Sabine'],
       rights => [\"SELECT right FROM Rights WHERE right = ?", 2]
     });
   $users = $oro->select(Person => ['name:displayName']);
-
-  $oro->select(
-    Person => sub {
-      print $_->{id}, "\n";
-      return -1 if $_->{name} eq 'Peter';
-    });
-
-  my $age = 0;
-  $oro->select(
-    Person => ['id', 'age'] => {
-      name => { like => 'Dani%' }} =>
-        sub {
-          print $_->{id}, "\n";
-          $age += $_->{age};
-          return -1 if $age >= 100;
-        });
 
 
 Returns an array reference of rows as hash references of a given table,
@@ -2385,18 +2388,12 @@ Expects the table name of the selection
 and optionally an array reference
 of fields, optionally a hash reference with L<conditions|/Conditions>,
 L<junctions|/Junctions>, and SQL specific L<restrictions|Restrictions>
-all rows have to fulfill, and optionally a callback,
-which is released after each row, passing the row as a hash reference.
-
-If a callback is given, the method has no return value.
-If the callback returns -1, the data fetching is aborted.
+all rows have to fulfill.
 
 Fields can be column names or SQL functions.
 With a colon you can define aliases of field names,
 like with C<count(field):field_count>.
 For preprocessing field values special L<treatments|/Treatments> can be applied.
-
-B<The callback is EXPERIMENTAL and may change without warnings.>
 
 
 =head2 load
@@ -2492,8 +2489,7 @@ fields to be returned. Defaults to all fields.
 
 In addition to that, the caching system can be applied as with L<select|/select>.
 
-A final callback function can be used to modify  each entry in the
-same way as with L<select|/select>.
+A final callback function can be used to modify each entry.
 
 The created response is a hash reference with the following structure:
 
@@ -2838,8 +2834,7 @@ identical content, fields with identical markers littler than C<0>
 will have different content.
 
 After the join table array reference, the optional hash
-reference with conditions, junctions and restrictions and an optional
-callback may follow.
+reference with conditions, junctions and restrictions may follow.
 
 B<Joins are EXPERIMENTAL and may change without warnings.>
 

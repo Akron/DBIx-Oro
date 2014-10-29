@@ -64,10 +64,9 @@ ok($row = $oro->load(Content =>
 
 is($row->{uccont}, 'SIMPLE CONTENT', 'Treatment');
 
-$oro->select(
+my $match = $oro->select(
   Content =>
     ['title', [$treat_content => 'uccont'], 'content'] =>
-      { title => { ne => 'ContentBulk' }},
-  sub {
-    is($_[0]->{uccont}, 'SIMPLE CONTENT', 'Treatment');
-  });
+      { title => { ne => 'ContentBulk' }});
+
+is($_->{uccont}, 'SIMPLE CONTENT', 'Treatment') foreach @$match;

@@ -56,22 +56,21 @@ is_deeply($check->{x}->[3], [0,1,1], 'Check x[3]');
 is_deeply($check->{x}->[4], [0,0,0], 'Check x[4]');
 is_deeply($check->{x}->[5], [1,1,1], 'Check x[5]');
 
-my $test = 'Check matchinfo in callback';
-$oro->select(
+my $test = 'Check matchinfo';
+my $rows = $oro->select(
   t1 => [ [ $matchinfo => 'check' ] ] =>
     {
       t1 => { match => 'default' }
-    },
-  sub {
-    my $row = shift;
-    is($row->{check}->{c}, 2, $test . ' 1');
-    is($row->{check}->{p}, 1, $test . ' 2');
-    is($row->{check}->{c}, 2, $test . ' 3');
-    is($row->{check}->{x}->[0]->[1], 3, $test . ' 4');
-    is($row->{check}->{x}->[1]->[1], 1, $test . ' 5');
-    is($row->{check}->{x}->[1]->[2], 1, $test . ' 6');
-  }
-  );
+    });
+
+foreach my $row (@$rows) {
+  is($row->{check}->{c}, 2, $test . ' 1');
+  is($row->{check}->{p}, 1, $test . ' 2');
+  is($row->{check}->{c}, 2, $test . ' 3');
+  is($row->{check}->{x}->[0]->[1], 3, $test . ' 4');
+  is($row->{check}->{x}->[1]->[1], 1, $test . ' 5');
+  is($row->{check}->{x}->[1]->[2], 1, $test . ' 6');
+};
 
 ok($result = $oro->select(
   t1 =>

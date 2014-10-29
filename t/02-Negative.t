@@ -139,40 +139,37 @@ is($row->{content}, 'This is second content.', 'Check');
 is($oro->delete(Content => { title => 'Another check!' }), 1, 'Delete');
 ok(!$oro->delete(Content => { title => 'Well.' }), 'Delete');
 
-$oro->select('Content' => sub {
-	       like(shift->{content},
-		    qr/This is (?:changed|third) content\./,
-		    'Select');
-	     });
+foreach (@{$oro->select('Content')}){
+  like($_->{content},
+       qr/This is (?:changed|third) content\./,
+       'Select');
+};
 
-$oro->select('Content' => sub {
-	       like($_->{content},
-		    qr/This is (?:changed|third) content\./,
-		    'Select');
-	     });
-
+foreach (@{$oro->select('Content')}) {
+  like($_->{content},
+       qr/This is (?:changed|third) content\./,
+       'Select');
+};
 
 my $once = 1;
-$oro->select('Content' => sub {
-	       ok($once--, 'Select Once');
-	       like(shift->{content},
-		    qr/This is (?:changed|third) content\./,
-		    'Select Once');
-	       return -1;
-	     });
+foreach (@{$oro->select('Content')}) {
+  ok($once--, 'Select Once');
+  like($_->{content},
+       qr/This is (?:changed|third) content\./,
+       'Select Once');
+  last;
+};
 
-$oro->select('Name' => ['prename'] =>
-	       sub {
-		 ok(!exists $_[0]->{surname}, 'Fields');
-		 ok($_[0]->{prename}, 'Fields');
-	     });
+foreach (@{$oro->select('Name' => ['prename'])}) {
+  ok(!exists $_->{surname}, 'Fields');
+  ok($_->{prename}, 'Fields');
+};
 
 # Callback with local $_;
-$oro->select('Name' => ['prename'] =>
-	       sub {
-		 ok(!exists $_->{surname}, 'Fields');
-		 ok($_->{prename}, 'Fields');
-	     });
+foreach (@{$oro->select('Name' => ['prename'])}) {
+  ok(!exists $_->{surname}, 'Fields');
+  ok($_->{prename}, 'Fields');
+};
 
 ok($oro->insert(Name => { prename => 'Ulli' }), 'Insert Ulli');
 
