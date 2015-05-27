@@ -2079,11 +2079,8 @@ sub _q {
 sub _trim_last_sql {
   my $last_sql = shift;
 
-  if (length($last_sql) > 500) {
-    return substr($last_sql, 0, 497) . ' ...';
-  };
-
-  return $last_sql;
+  return $last_sql if length($last_sql) <= 500;
+  return substr($last_sql, 0, 497) . ' ...';
 };
 
 
