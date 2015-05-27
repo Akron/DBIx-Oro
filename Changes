@@ -1,6 +1,11 @@
-0.31 2014-10-28
+0.31 2015-05-27
         - 0.31_1
 	  - Deprecated callback in select.
+	- 0.31_2
+	  - Added optional parameter to offsets
+	    in SQLite driver.
+	  - Don't destroy cache objects using DELETE.
+	  - Fixed message trimming.
 
 0.30 2014-09-09
         - 0.30_1

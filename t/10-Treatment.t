@@ -25,7 +25,7 @@ unless ($suite) {
 };
 
 # Start test
-plan tests => 9;
+plan tests => 12;
 
 use_ok 'DBIx::Oro';
 
@@ -38,7 +38,7 @@ ok($oro, 'Handle created');
 
 ok($suite->oro($oro), 'Add to suite');
 
-ok($suite->init(qw/Content/), 'Init');
+ok($suite->init(qw/Content Name/), 'Init');
 
 END {
   ok($suite->drop, 'Transaction for Dropping') if $suite;
@@ -55,7 +55,16 @@ my $row;
 
 ok($oro->insert(Content => {
   title => 'Not Bulk',
-  content => 'Simple Content' }), 'Insert');
+  content => 'Simple Content',
+  author_id => 4
+}), 'Insert content');
+
+ok($oro->insert(Name => {
+  id => 4,
+  prename => 'Hal',
+  surname => 'Corben',
+  age => 24
+}), 'Insert author');
 
 ok($row = $oro->load(Content =>
 		       ['title', [$treat_content => 'uccont'], 'content'] =>
@@ -70,3 +79,19 @@ my $match = $oro->select(
       { title => { ne => 'ContentBulk' }});
 
 is($_->{uccont}, 'SIMPLE CONTENT', 'Treatment') foreach @$match;
+
+# Treatment in join
+SKIP: {
+  skip "Treatments in joined tables not fixed yet", 2;
+
+  ok($row = $oro->load(
+    [
+      Content => ['title', [$treat_content => 'uccont'], 'content'] => { author_id => 1 },
+      Name => ['prename'] => { id => 1 }
+    ] => {
+      title => { ne => 'ContentBulk' }
+    }
+  ), 'Load with Treatment');
+
+  is($row->{uccont}, 'SIMPLE CONTENT', 'Treatment');
+};

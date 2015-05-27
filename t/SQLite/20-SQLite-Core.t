@@ -1,5 +1,5 @@
 #!/usr/bin/env perl
-use Test::More tests => 79;
+use Test::More tests => 92;
 use File::Temp qw/:POSIX/;
 use strict;
 use warnings;
@@ -7,9 +7,13 @@ use warnings;
 use Data::Dumper;
 
 use lib
+  '..',
+  't',
   '../lib',
   '../../lib',
   '../../../lib';
+
+use DBTestSuite;
 
 use_ok 'DBIx::Oro';
 
@@ -88,8 +92,8 @@ is_deeply($result->[1]->{check}->{s}, [1,1], 'Check l[2]');
 
 # Offsets
 ok($oro->do('CREATE VIRTUAL TABLE mail USING fts3(subject, body)'), 'Init table');
-ok($oro->insert(mail => { subject => 'hello world', body => 'This message is a hello world message.' }), 'Insert');
-ok($oro->insert(mail => { subject => 'urgent: serious', body => 'This mail is seen as a more serious mail' }), 'Insert');
+ok($oro->insert(mail => { subject => 'hello world', body => 'This message is a hello world message.', docid => 2 }), 'Insert');
+ok($oro->insert(mail => { subject => 'urgent: serious', body => 'This mail is seen as a more serious mail', docid => 3 }), 'Insert');
 
 ok($result = $oro->load(
   mail =>
@@ -102,8 +106,53 @@ ok($result = $oro->load(
 is($result->{check}->[0]->[2], 6, 'Byte offset');
 is($result->{check}->[1]->[2], 24, 'Byte offset');
 
+ok($oro->do('CREATE TABLE mailinfo (doc_id INTEGER PRIMARY KEY, title TEXT)'), 'Init table');
+ok($oro->insert(mailinfo => { title => 'hello', doc_id => 2 }), 'Insert');
+ok($oro->insert(mailinfo => { title => 'urgent', doc_id => 3 }), 'Insert');
 
+ok($result = $oro->load([
+  mail => [qw/body/] => { docid => 1 },
+  mailinfo => [qw/title/] => { doc_id => 1 }
+] => {
+  body => { match => 'world' }
+}), 'Load with join');
+
+is($result->{body}, 'This message is a hello world message.', 'Content');
+is($result->{title}, 'hello', 'title');
+
+SKIP : {
+  skip "Treatments in joined tables not fixed yet", 6;
+
+  ok($result = $oro->load([
+    mail => ['body', [$oro->offsets('mail') => 'check']] => { docid => 1 },
+    mailinfo => [qw/title/] => { doc_id => 1 }
+  ] => {
+    body => { match => 'world' }
+  }), 'Load with join');
+
+
+  is($result->{body}, 'This message is a hello world message.', 'Content');
+  is($result->{title}, 'hello', 'title');
+  is($result->{check}->[0], '', 'Offset');
+
+  ok($result = $oro->load([
+    mailinfo => [qw/title/] => { doc_id => 1 },
+    mail => ['body', [$oro->offsets('mail') => 'check']] => { docid => 1 }
+  ] => {
+    body => { match => 'world' }
+  }), 'Load with join');
+
+  is($result->{check}->[0], '', 'Offset');
+};
+
+# Attach/detach
 ok($oro->attach('testdb'), 'Attach temporary database');
+
+# No double attachements
+no_warn {
+  ok(!$oro->attach('testdb'), 'Attach temporary database');
+};
+
 
 my $doc;
 ok($doc = $oro->load(t1 => ['docid:id'] => { a => { match => 'request'} }),

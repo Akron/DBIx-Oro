@@ -440,6 +440,7 @@ sub attach {
   my $rv = scalar $self->prep_and_exec("ATTACH '$file' AS ?", [$db_name]);
 
   $self->{attached}->{$db_name} = $file;
+
   return $rv;
 };
 
@@ -562,6 +563,7 @@ sub _matchinfo_return {
 # Create offsets function
 sub offsets {
   my $self = shift;
+  my $field = shift;
 
   # Use no multibyte characters
   use bytes;
@@ -569,7 +571,7 @@ sub offsets {
   # subroutine
   return sub {
     my $column = shift;
-    'offsets(' . ($column || 'content') . ')',
+    'offsets(' . ($column // $field // 'content') . ')',
       sub {
 	my $blob = shift;
 	my @offset;
@@ -578,8 +580,8 @@ sub offsets {
 	  push(@offset, [ splice(@array, 0, 4) ]);
 	};
 	return \@offset;
-      };
-  };
+      }
+    };
 };
 
 
@@ -1041,7 +1043,8 @@ Returns the column value as a hash reference of the associated values.
 
 Creates a treatment for L<select|DBIx::Oro/select> or L<load|DBIx::Oro/load> that supports
 offset information for fts3/fts4 tables.
-It accepts no parameters and returns the column value as an array reference
+It accepts an optional parameter for column association
+and returns the column value as an array reference
 containing multiple array references.
 
 See the L<SQLite manual|https://www.sqlite.org/fts3.html#section_4_1> for further information.

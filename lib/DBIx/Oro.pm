@@ -2,9 +2,11 @@ package DBIx::Oro;
 use strict;
 use warnings;
 
-our $VERSION = '0.31_1';
+our $VERSION = '0.31_2';
 
 # See the bottom of this file for the POD documentation.
+
+# Todo: Fix treatments in joined tables!
 
 # Todo: Are combined indices necessarily in the same order?
 #       In that case update and select etc. need ordered
@@ -30,7 +32,6 @@ our $VERSION = '0.31_1';
 #          token => $search_for
 #        });
 #        (Should raise error)
-# Debug: DBIx::Oro-Treatment in Joint Tables
 # Todo: Support left outer join (Maybe with id => 1, maybe => 1 in join hash)
 # Todo: Create all Queries in DBIx::Oro::Query
 # Todo: To change queries from different drivers,
@@ -459,7 +460,8 @@ sub select {
   my $self  = shift;
 
   # Get table object
-  my ($tables, $fields,
+  my ($tables,
+      $fields,
       $join_pairs,
       $treatment,
       $field_alias) = _table_obj($self, \@_);
@@ -1058,7 +1060,7 @@ sub prep_and_exec {
   if ($dbh->err) {
 
     if (index($dbh->errstr, 'database') <= 0) {
-      carp $dbh->errstr . ' in "' . _trim_last_sql($self->last_sql) . '"';
+      carp $dbh->errstr . ' in "' .  _trim_last_sql($self->last_sql) . '"';
       return;
     };
 
@@ -1451,7 +1453,7 @@ sub _table_obj {
       $tables = [ $table ];
     }
 
-    # Join tables
+    # Joined tables
     else {
       return _join_tables( $table );
     };
@@ -1841,11 +1843,11 @@ sub _get_pairs {
 
       # Cache
       elsif ($key eq '-cache') {
-	my $chi = delete $value->{chi};
+	my $chi = $value->{chi};
 
 	# Check chi existence
 	if ($chi) {
-	  $prep{cache} = [ $chi, delete $value->{key} // '', $value ];
+	  $prep{cache} = [ $chi, $value->{key} // '', $value ];
 	}
 
 	# No chi given
@@ -2080,6 +2082,8 @@ sub _trim_last_sql {
   if (length($last_sql) > 500) {
     return substr($last_sql, 0, 497) . ' ...';
   };
+
+  return $last_sql;
 };
 
 
