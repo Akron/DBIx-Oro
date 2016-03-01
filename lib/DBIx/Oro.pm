@@ -2,7 +2,7 @@ package DBIx::Oro;
 use strict;
 use warnings;
 
-our $VERSION = '0.31_2';
+our $VERSION = '0.31_3';
 
 # See the bottom of this file for the POD documentation.
 
@@ -2001,7 +2001,7 @@ sub _clean_alias {
   for (my $x = shift) {
     tr/ ()[]"$@#./_/s;
     s/[_\s]+$//;
-    return lc $x;
+    return $x;
   };
 };
 

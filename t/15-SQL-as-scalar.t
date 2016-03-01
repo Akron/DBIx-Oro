@@ -45,14 +45,24 @@ END {
 ok($oro->insert(Content => { title => 'Check!',
 			     content => 'This is content.'}), 'Insert');
 
-ok($oro->insert(Name => { prename => 'Akron',
-			  surname => 'Sojolicious'}), 'Insert');
+ok($oro->insert(Name => {
+  prename => 'Akron',
+  surname => 'Sojolicious',
+  age => 23
+}), 'Insert');
 
-ok($oro->insert(Name => { prename => 'Nils',
-			  surname => 'Fragezeichen'}), 'Insert');
+ok($oro->insert(Name => {
+  prename => 'Nils',
+  surname => 'Fragezeichen',
+  age => 24
+}), 'Insert');
 
 
-$oro->insert(Name => { prename => '0045', surname => 'xyz777'});
+$oro->insert(Name => {
+  prename => '0045',
+  surname => 'xyz777',
+  age => 25
+});
 
 is($oro->load(Name => { surname => 'xyz777' })->{prename},
    '0045',
@@ -72,7 +82,8 @@ like($string, qr/\Q$string\E/, 'SUBSELECT works');
 
 ok($oro->insert(Name => {
   surname => 'Meier',
-  prename => [\'SELECT prename FROM Name WHERE surname = ?', 'Sojolicious']
+  prename => [\'SELECT prename FROM Name WHERE surname = ?', 'Sojolicious'],
+  age => 6
 }), 'Insert with subselect');
 
 ok(my $user = $oro->load(Name => {surname => 'Meier', prename => 'Akron' }), 'Load user');
@@ -81,13 +92,12 @@ is($user->{prename}, 'Akron', 'Prename');
 
 ok($oro->insert(Name => {
   surname => 'Mueller',
-  prename => \'SELECT prename FROM Name WHERE surname = "Fragezeichen"'
+  prename => \'SELECT prename FROM Name WHERE surname = "Fragezeichen"',
+  age => 27
 }), 'Insert with subselect');
 
 ok($user = $oro->load(Name => {surname => 'Mueller', prename => 'Nils' }), 'Load user');
 is($user->{surname}, 'Mueller', 'Surname');
 is($user->{prename}, 'Nils', 'Prename');
-
-
 
 # Delete all.

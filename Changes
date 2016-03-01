@@ -6,6 +6,9 @@
 	    in SQLite driver.
 	  - Don't destroy cache objects using DELETE.
 	  - Fixed message trimming.
+	- 0.31_3
+	  - Added 'attached' parameter to SQLite.
+	  - Fixed alias treatment.
 
 0.30 2014-09-09
         - 0.30_1

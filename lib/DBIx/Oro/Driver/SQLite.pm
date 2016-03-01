@@ -69,7 +69,7 @@ sub new {
   $self->{dsn} = 'dbi:SQLite:dbname=' . $self->{file};
 
   # Attach hash
-  $self->{attached} = {};
+  $self->{attached} = {} unless exists $self->{attached};
 
   # Autocommit
   ${$self->{autocommit}} =
@@ -922,6 +922,9 @@ is created. A callback function called C<init> will be triggered,
 if the database was newly created. This callback is wrapped inside
 a transaction.
 The first parameter of the callback function is the Oro object.
+The C<attached> database handle and file pairs will be attached
+on every reconnect.
+
 
 See L<new in DBIx::Oro|DBIx::Oro/new> for further information.
 

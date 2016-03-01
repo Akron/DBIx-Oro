@@ -153,6 +153,8 @@ no_warn {
   ok(!$oro->attach('testdb'), 'Attach temporary database');
 };
 
+# Todo: Test 'attached' parameter
+
 
 my $doc;
 ok($doc = $oro->load(t1 => ['docid:id'] => { a => { match => 'request'} }),
