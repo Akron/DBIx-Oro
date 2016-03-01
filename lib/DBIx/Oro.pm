@@ -2,7 +2,7 @@ package DBIx::Oro;
 use strict;
 use warnings;
 
-our $VERSION = '0.31_3';
+our $VERSION = '0.31_4';
 
 # See the bottom of this file for the POD documentation.
 
@@ -235,12 +235,12 @@ sub dbh {
 
   # Check for thread id
   if (defined $self->{tid} && $self->{tid} != threads->tid) {
-    return $self->_connect or croak $c;
+    return $self->_connect || croak $c;
   }
 
   # Check for process id
   elsif ($self->{pid} != $$) {
-    return $self->_connect or croak $c;
+    return $self->_connect || croak $c;
   }
 
   elsif ($self->{dbh}->{Active}) {
@@ -248,7 +248,7 @@ sub dbh {
   };
 
   # Return handle if active
-  return $self->_connect or croak $c;
+  return $self->_connect || croak $c;
 };
 
 
