@@ -26,6 +26,7 @@ t/SQLite/20-SQLite-Core.t
 t/SQLite/21-SQLite-Autocommit.t
 t/SQLite/22-SQLite-ForeignKeys.t
 t/SQLite/23-SQLite-FTS.t
+t/SQLite/Analyzer.pm
 Changes
 MANIFEST
 LICENSE

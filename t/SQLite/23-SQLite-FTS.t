@@ -1,28 +1,10 @@
 #!/usr/bin/env perl
-package SQLite::Analyzer;
-use strict;
-use warnings;
-
-sub tokenize {
-  return sub {
-    my $string = shift;
-    my $regex      = qr/\p{Word}+(?:[-']\p{Word}+)*/;
-    my $term_index = 0;
-
-    return sub { # closure
-      $string =~ /$regex/g or return; # either match, or no more token
-      my ($start, $end) = ($-[0], $+[0]);
-      my $len           = $end-$start;
-      my $term          = substr($string, $start, $len);
-      return ($term, $len, $start, $end, $term_index++);
-    }
-  };
-};
-
-package main;
 use Test::More;
 use File::Temp qw/:POSIX/;
 use strict;
+use FindBin;
+use lib "$FindBin::Bin/../";
+use SQLite::Analyzer;
 use warnings;
 use utf8;
 

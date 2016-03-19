@@ -13,6 +13,10 @@
 	  - Fixed precedence warning for recent perl versions.
 	- 0.31_5
 	  - Removed bytes pragma use and added FTS test.
+	- 0.31_6
+	  - Fixed FTS test.
+	- 0.31_7
+	  - Fixed FTS test (2).
 
 0.30 2014-09-09
         - 0.30_1
