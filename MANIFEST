@@ -22,6 +22,10 @@ t/18-stringification.t
 t/19-escape-fields.t
 t/666-Bobby-Tables.t
 t/DBTestSuite.pm
+t/SQLite/20-SQLite-Core.t
+t/SQLite/21-SQLite-Autocommit.t
+t/SQLite/22-SQLite-ForeignKeys.t
+t/SQLite/23-SQLite-FTS.t
 Changes
 MANIFEST
 LICENSE

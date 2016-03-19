@@ -471,7 +471,7 @@ sub matchinfo {
   my $self   = shift;
 
   # Use no multibyte characters
-  use bytes;
+  # use bytes;
 
   # Format string
   my $format = lc(shift) if $_[0] && $_[0] =~ /^[pcnalsx]+$/i;
@@ -566,7 +566,7 @@ sub offsets {
   my $field = shift;
 
   # Use no multibyte characters
-  use bytes;
+  # use bytes;
 
   # subroutine
   return sub {
