@@ -2,7 +2,7 @@ package DBIx::Oro;
 use strict;
 use warnings;
 
-our $VERSION = '0.31_7';
+our $VERSION = '0.31_8';
 
 # See the bottom of this file for the POD documentation.
 
@@ -2989,7 +2989,7 @@ to L<SQL::Abstract>, written by Nathan Wiger et al.
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2011-2014, L<Nils Diewald|http://nils-diewald.de/>.
+Copyright (C) 2011-2016, L<Nils Diewald|http://nils-diewald.de/>.
 
 This program is free software, you can redistribute it
 and/or modify it under the same terms as Perl.

@@ -1,4 +1,4 @@
-0.31 2016-03-19
+0.31 2016-03-20
         - 0.31_1
 	  - Deprecated callback in select.
 	- 0.31_2
@@ -17,6 +17,9 @@
 	  - Fixed FTS test.
 	- 0.31_7
 	  - Fixed FTS test (2).
+	- 0.31_8
+	  - Skip FTS test in case SQLite was not compiled with
+	    tokenizers enabled.
 
 0.30 2014-09-09
         - 0.30_1
