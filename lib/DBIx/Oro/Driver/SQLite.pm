@@ -135,7 +135,9 @@ sub _init {
 # Connect to database
 sub _connect {
   my $self = shift;
-  my $dbh = $self->SUPER::_connect( sqlite_unicode => 1 );
+  my $dbh = $self->SUPER::_connect(
+    sqlite_unicode => defined $self->{unicode} ? $self->{unicode} : 1
+  );
 
   # Turn foreign keys on as default
   $dbh->do('PRAGMA foreign_keys = ON') unless $self->{foreign_keys};
@@ -924,7 +926,8 @@ a transaction.
 The first parameter of the callback function is the Oro object.
 The C<attached> database handle and file pairs will be attached
 on every reconnect.
-
+The C<unicode> parameter defines the C<sqlite_unicode>
+property on every connect. Defaults to C<true>.
 
 See L<new in DBIx::Oro|DBIx::Oro/new> for further information.
 

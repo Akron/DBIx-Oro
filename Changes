@@ -1,4 +1,4 @@
-0.31 2016-03-20
+0.31 2016-03-21
         - 0.31_1
 	  - Deprecated callback in select.
 	- 0.31_2
@@ -20,6 +20,9 @@
 	- 0.31_8
 	  - Skip FTS test in case SQLite was not compiled with
 	    tokenizers enabled.
+	- 0.31_9
+	  - Added unicode parameter to SQLite driver to properly
+	    work with FTS.
 
 0.30 2014-09-09
         - 0.30_1

@@ -2,7 +2,7 @@ package DBIx::Oro;
 use strict;
 use warnings;
 
-our $VERSION = '0.31_8';
+our $VERSION = '0.31_9';
 
 # See the bottom of this file for the POD documentation.
 
