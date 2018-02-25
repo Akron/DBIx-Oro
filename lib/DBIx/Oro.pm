@@ -2223,7 +2223,9 @@ for database specific drivers.
 
 B<DBIx::Oro is a development release!
 Do not rely on any API methods, especially
-on those marked as experimental.>
+on those marked as experimental.
+Please refer to more mature drivers with a similar
+design than this, like L<Mojo::SQLite>.>
 
 
 =head1 ATTRIBUTES
