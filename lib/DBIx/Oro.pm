@@ -2,7 +2,7 @@ package DBIx::Oro;
 use strict;
 use warnings;
 
-our $VERSION = '0.31_9';
+our $VERSION = '0.32_1';
 
 # See the bottom of this file for the POD documentation.
 
@@ -54,11 +54,11 @@ use DBI;
 our $AS_REGEX = qr/(?::~?`?[-_a-zA-Z0-9]+`?)/;
 
 our $OP_REGEX = qr/^(?i:
-		     (?:[\<\>\!=]?\=?)|<>|
-		     (?:!|not[_ ])?
-		     (?:match|like|glob|regex|between)|
-		     (?:eq|ne|[gl][te]|not)
-		   )$/x;
+                     (?:[\<\>\!=]?\=?)|<>|
+                     (?:!|not[_ ])?
+                     (?:match|like|glob|regex|between)|
+                     (?:eq|ne|[gl][te]|not)
+                   )$/x;
 
 our $KEY_REGEX = qr/`?[_\.0-9a-zA-Z]+`?/;
 
@@ -197,19 +197,19 @@ sub table {
   my %param = (
     table => do {
       if (ref($_[0])) {
-	[ _join_tables( shift(@_) ) ];
+        [ _join_tables( shift(@_) ) ];
       }
 
       # Table name
       else {
-	shift;
+        shift;
       };
     }
   );
 
   # Clone parameters
   foreach (qw/dbh created in_txn savepoint pid tid
-	      dsn _connect_cb on_connect/) {
+              dsn _connect_cb on_connect/) {
     $param{$_} = $self->{$_};
   };
 
@@ -345,10 +345,10 @@ sub insert {
 
     if ($prop && (my $oc = $prop->{-on_conflict})) {
       if ($oc eq 'replace') {
-	$sql = 'REPLACE '
+        $sql = 'REPLACE '
       }
       elsif ($oc eq 'ignore')  {
-	$sql .= 'IGNORE '
+        $sql .= 'IGNORE '
       };
     };
 
@@ -388,7 +388,7 @@ sub insert {
 
     my $sql .= 'INSERT INTO ' . $table .
       ' (' . join(', ',  map { "`$_`" } @keys) . ') ' .
-	'VALUES ';
+      'VALUES ';
 
     # Add data in brackets
     $sql .= join(', ', ('(' ._q(\@keys) . ')') x scalar @_ );
@@ -580,20 +580,20 @@ sub select {
       # Treat result
       if ($treatment) {
 
-	# Treat each treatable row value
-	foreach ( grep { exists $row->{$_} } @treatment) {
-	  $row->{$_} = $treatsub{$_}->(
-	    $row->{$_}, @{ $treatment->{$_} }
-	  );
-	};
+        # Treat each treatable row value
+        foreach ( grep { exists $row->{$_} } @treatment) {
+          $row->{$_} = $treatsub{$_}->(
+            $row->{$_}, @{ $treatment->{$_} }
+          );
+        };
       };
 
       # Finish if callback returns -1
       local $_ = $row;
       my $rv = $cb->($row);
       if ($rv && $rv eq '-1') {
-	$result = undef;
-	last;
+        $result = undef;
+        last;
       };
     };
 
@@ -629,7 +629,7 @@ sub select {
     # Treat each treatable row value
     foreach (@treatment) {
       $row->{$_} = $treatsub{$_}->(
-	$row->{$_}, @{$treatment->{$_}}
+        $row->{$_}, @{$treatment->{$_}}
       ) if $row->{$_};
     };
   };
@@ -712,63 +712,63 @@ sub list {
       # Check for presence
       if ($filter_op eq 'present') {
 
-	# Create SQL condition
-	$condition{$filter_by} = { not => undef };
+        # Create SQL condition
+        $condition{$filter_by} = { not => undef };
       }
 
       # Check for absence
       elsif ($filter_op eq 'absent') {
 
-	# Create SQL condition
-	$condition{$filter_by} = undef;
+        # Create SQL condition
+        $condition{$filter_by} = undef;
       }
 
       # Check with filterValue
       else {
 
-	# Get filterValue
-	if (my $fv = _check_param($param, 'filterValue')) {
+        # Get filterValue
+        if (my $fv = _check_param($param, 'filterValue')) {
 
-	  # Set filter value for response
-	  $filter{filterValue} = $fv;
+          # Set filter value for response
+          $filter{filterValue} = $fv;
 
-	  # Check for equality
-	  if ($filter_op eq 'equals') {
+          # Check for equality
+          if ($filter_op eq 'equals') {
 
-	    # Equals the value
-	    $condition{$filter_by} = $fv;
-	  }
+            # Equals the value
+            $condition{$filter_by} = $fv;
+          }
 
-	  # Check for disparaty
-	  elsif ($filter_op eq 'disparate') {
+          # Check for disparaty
+          elsif ($filter_op eq 'disparate') {
 
-	    # Equals the value
-	    $condition{$filter_by} = { ne => $fv };
-	  }
+            # Equals the value
+            $condition{$filter_by} = { ne => $fv };
+          }
 
-	  # Check with SQL like
-	  else {
-	    $fv =~ s/([\%_])/\\$1/g;
+          # Check with SQL like
+          else {
+            $fv =~ s/([\%_])/\\$1/g;
 
-	    # Check for containing
-	    if ($filter_op eq 'contains') {
-	      $condition{$filter_by} = { like => "%${fv}%" };
-	    }
+            # Check for containing
+            if ($filter_op eq 'contains') {
+              $condition{$filter_by} = { like => "%${fv}%" };
+            }
 
-	    # Check for beginning
-	    elsif ($filter_op eq 'startswith') {
+            # Check for beginning
+            elsif ($filter_op eq 'startswith') {
 
-	      # Set response operation
-	      $filter{filterOp} = 'startsWith';
-	      $condition{$filter_by} = { like => "${fv}%" };
-	    };
-	  };
-	}
+              # Set response operation
+              $filter{filterOp} = 'startsWith';
+              $condition{$filter_by} = { like => "${fv}%" };
+            };
+          };
+        }
 
-	# No filterValue - reset
-	else {
-	  %filter = ();
-	};
+        # No filterValue - reset
+        else {
+          %filter = ();
+        };
       };
     };
   };
@@ -791,9 +791,9 @@ sub list {
     # Fields is a string
     else {
       @fields =
-	grep { /^$KEY_REGEX$/ }
-	  map { s/\s//g; $_ }
-	    split /\s*,\s*/, $param->{fields};
+        grep { /^$KEY_REGEX$/ }
+        map { s/\s//g; $_ }
+        split /\s*,\s*/, $param->{fields};
     };
   };
 
@@ -811,12 +811,12 @@ sub list {
       # Iterate for filtering
       foreach my $row (@$select) {
 
-	# Filter
-	my %new;
-	foreach (@fields) {
-	  $new{$_} = $row->{$_} if exists $row->{$_};
-	};
-	push(@$entry, \%new);
+        # Filter
+        my %new;
+        foreach (@fields) {
+          $new{$_} = $row->{$_} if exists $row->{$_};
+        };
+        push(@$entry, \%new);
       };
 
       # Define fields
@@ -950,7 +950,7 @@ sub merge {
 
       # Delete all element conditions
       delete $cond{$_} foreach grep {
-	ref($cond{$_}) && !blessed($cond{$_})
+        ref($cond{$_}) && !blessed($cond{$_})
       } keys %cond;
 
       # Insert
@@ -1069,7 +1069,7 @@ sub prep_and_exec {
 
     $sth =
       $cached ? $dbh->prepare_cached( $sql ) :
-	$dbh->prepare( $sql );
+      $dbh->prepare( $sql );
 
     if ($dbh->err) {
       carp $dbh->errstr . ' in "' . _trim_last_sql($self->last_sql) . '"';
@@ -1256,23 +1256,23 @@ sub import_sql {
 
       # Start transaction
       return $self->txn(
-	sub {
-	  my ($sql, @sql_seq);;
-	  foreach $sql (@sql) {
-	    $sql =~ s/^(?:--.*?|\s*)?$//mg;
-	    $sql =~ s/\n\n+/\n/sg;
+        sub {
+          my ($sql, @sql_seq);;
+          foreach $sql (@sql) {
+            $sql =~ s/^(?:--.*?|\s*)?$//mg;
+            $sql =~ s/\n\n+/\n/sg;
 
-	    # Use callback
-	    @sql_seq = $cb->($sql) if $cb && $sql;
+            # Use callback
+            @sql_seq = $cb->($sql) if $cb && $sql;
 
-	    next unless $sql;
+            next unless $sql;
 
-	    # Start import
-	    foreach (@sql_seq) {
-	      $self->do($_) or return -1;
-	    };
-	  };
-	}
+            # Start import
+            foreach (@sql_seq) {
+              $self->do($_) or return -1;
+            };
+          };
+        }
       );
     }
 
@@ -1287,9 +1287,9 @@ sub import_sql {
   if (ref $files) {
     return $self->txn(
       sub {
-	foreach (@$files) {
-	  $import->($_) or return -1;
-	};
+        foreach (@$files) {
+          $import->($_) or return -1;
+        };
       });
   };
 
@@ -1405,10 +1405,10 @@ sub _connect {
 
       # Password can only be set on construction
       for ((caller(1))[3]) {
-	m/::new$/o or return;
-	index($_, __PACKAGE__) == 0 or return;
-	!$pwd{$id} or return;
-	$pwd{$id} = $pwd_set;
+        m/::new$/o or return;
+        index($_, __PACKAGE__) == 0 or return;
+        !$pwd{$id} or return;
+        $pwd{$id} = $pwd_set;
       };
     };
   };
@@ -1508,91 +1508,91 @@ sub _join_tables {
       # Field array
       if ($ref eq 'ARRAY') {
 
-	my $field_array = shift @join;
+        my $field_array = shift @join;
 
-	my $f_prefix = '';
+        my $f_prefix = '';
 
-	# Has a hash next to it
-	if (ref $join[0] && ref $join[0] eq 'HASH') {
+        # Has a hash next to it
+        if (ref $join[0] && ref $join[0] eq 'HASH') {
 
-	  # Set Prefix if given
-	  # Todo: Is this documented?
-	  if (exists $join[0]->{-prefix}) {
-	    $f_prefix = delete $join[0]->{-prefix};
-	    $f_prefix = _clean_alias($prefix) . '_' if $f_prefix eq '*';
-	  };
-	};
+          # Set Prefix if given
+          # Todo: Is this documented?
+          if (exists $join[0]->{-prefix}) {
+            $f_prefix = delete $join[0]->{-prefix};
+            $f_prefix = _clean_alias($prefix) . '_' if $f_prefix eq '*';
+          };
+        };
 
-	# Reformat field values
-	my $reformat = [
-	  map {
+        # Reformat field values
+        my $reformat = [
+          map {
 
-	    # Is a reference
-	    unless (ref $_) {
+            # Is a reference
+            unless (ref $_) {
 
-	      # Set alias semi explicitely
-	      if (index($_, ':') == -1) {
-		$_ .= ':~' . $f_prefix . _clean_alias($_);
-	      };
+              # Set alias semi explicitely
+              if (index($_, ':') == -1) {
+                $_ .= ':~' . $f_prefix . _clean_alias($_);
+              };
 
-	      # Field is not a function
-	      if (index($_, '(') == -1) {
-		$_ = "$prefix.$_" if index($_, '.') == -1;
-	      }
+              # Field is not a function
+              if (index($_, '(') == -1) {
+                $_ = "$prefix.$_" if index($_, '.') == -1;
+              }
 
-	      # Field is a function
-	      else {
-		s/((?:\(|$FIELD_OP_REGEX)\s*)($KEY_REGEX_NOPREF)
+              # Field is a function
+              else {
+                s/((?:\(|$FIELD_OP_REGEX)\s*)($KEY_REGEX_NOPREF)
                   (\s*(?:$FIELD_OP_REGEX|\)))/$1$prefix\.$2$3/ogx;
-	      };
+              };
 
-	    };
+            };
 
-	    $_;
-	  } @$field_array
-	];
+            $_;
+          } @$field_array
+        ];
 
-	# Automatically prepend table and, if not given, alias
-	(my $fields, $treatment, my $alias) = _fields($t_alias, $reformat);
+        # Automatically prepend table and, if not given, alias
+        (my $fields, $treatment, my $alias) = _fields($t_alias, $reformat);
 
-	# Set alias for markers
-	# $alias{$_} = 1 foreach keys %$alias;
-	while (my ($key, $val) = each %$alias) {
-	  $field_alias{$key} = $alias{$key} = $val ;
-	};
+        # Set alias for markers
+        # $alias{$_} = 1 foreach keys %$alias;
+        while (my ($key, $val) = each %$alias) {
+          $field_alias{$key} = $alias{$key} = $val ;
+        };
 
-	# TODO: only use alias if necessary, as they can't be used in WHERE!
+        # TODO: only use alias if necessary, as they can't be used in WHERE!
 
-	push(@fields, $fields) if $fields;
+        push(@fields, $fields) if $fields;
       }
 
       # Add prepended *
       else {
-	push(@fields, "$prefix.*");
+        push(@fields, "$prefix.*");
       };
 
       # Marker hash reference
       if (ref $join[0] && ref $join[0] eq 'HASH') {
-	my $hash = shift @join;
+        my $hash = shift @join;
 
-	# Add database fields to marker hash
-	while (my ($key, $value) = each %$hash) {
+        # Add database fields to marker hash
+        while (my ($key, $value) = each %$hash) {
 
-	  # TODO: Does this work?
-	  unless ($alias{$key}) {
-	    $key = "$prefix.$key" if $key =~ $KEY_REGEX_NOPREF;
-	  }
-	  else {
-	    $key = $alias{$key};
-	  };
+          # TODO: Does this work?
+          unless ($alias{$key}) {
+            $key = "$prefix.$key" if $key =~ $KEY_REGEX_NOPREF;
+          }
+          else {
+            $key = $alias{$key};
+          };
 
-	  # Prefix, if not an explicite alias
-	  foreach (ref $value ? @$value : $value) {
+          # Prefix, if not an explicite alias
+          foreach (ref $value ? @$value : $value) {
 
-	    my $array = ($marker{$_} //= []);
-	    push(@$array, $key);
-	  };
-	};
+            my $array = ($marker{$_} //= []);
+            push(@$array, $key);
+          };
+        };
       };
     };
   };
@@ -1603,8 +1603,8 @@ sub _join_tables {
     my $field = shift(@$fields);
     foreach (@$fields) {
       push(
-	@pairs,
-	"$field " . ($ind < 0 ? '!' : '') . "= $_"
+        @pairs,
+        "$field " . ($ind < 0 ? '!' : '') . "= $_"
       );
     };
   };
@@ -1637,125 +1637,123 @@ sub _get_pairs {
       # Equality
       unless (ref $value) {
 
-	# NULL value
-	unless (defined $value) {
-	  push(@pairs, "$key IS NULL");
-	}
+        # NULL value
+        unless (defined $value) {
+          push(@pairs, "$key IS NULL");
+        }
 
-	# Simple value
-	else {
-
-	  push(@pairs, "$key = ?"),
-	    push(@values, $value);
-	}
+        # Simple value
+        else {
+          push(@pairs, "$key = ?"),
+            push(@values, $value);
+        }
       }
 
       # Element of or SQL
       elsif (ref $value eq 'ARRAY') {
 
-	# Escaped SQL
-	if (ref $value->[0] && ref $value->[0] eq 'SCALAR') {
-	  push(@pairs, "$key = (" . ${$value->[0]} . ')'),
-	    push(@values, map { _stringify($_) } @{$value}[ 1 .. $#$value ]);
-	  next;
-	};
+        # Escaped SQL
+        if (ref $value->[0] && ref $value->[0] eq 'SCALAR') {
+          push(@pairs, "$key = (" . ${$value->[0]} . ')'),
+            push(@values, map { _stringify($_) } @{$value}[ 1 .. $#$value ]);
+          next;
+        };
 
-	# Undefined values in the array are not specified
-	# as ' IN (NULL, ...)' does not work
-	push (@pairs, "$key IN (" . _q($value) . ')' ),
-	  push(@values, map { _stringify($_) } @$value);
+        # Undefined values in the array are not specified
+        # as ' IN (NULL, ...)' does not work
+        push (@pairs, "$key IN (" . _q($value) . ')' ),
+          push(@values, map { _stringify($_) } @$value);
       }
 
       # Operators
       elsif (ref $value eq 'HASH') {
-	while (my ($op, $val) = each %$value) {
-	  if ($op =~ $OP_REGEX) {
-	    for ($op) {
+        while (my ($op, $val) = each %$value) {
+          if ($op =~ $OP_REGEX) {
+            for ($op) {
 
-	      # Uppercase
-	      $_ = uc;
+              # Uppercase
+              $_ = uc;
 
-	      # Translate negation
-	      s{^(?:NOT_|!(?=[MLGRB]))}{NOT };
+              # Translate negation
+              s{^(?:NOT_|!(?=[MLGRB]))}{NOT };
 
-	      # Translate literal compare operators
-	      tr/GLENTQ/><=!/d if $_ =~ m/^(?:[GL][TE]|NE|EQ)$/o;
-	      s/==/=/o;
-	    };
+              # Translate literal compare operators
+              tr/GLENTQ/><=!/d if $_ =~ m/^(?:[GL][TE]|NE|EQ)$/o;
+              s/==/=/o;
+            };
 
-	    # Array operators
-	    if (ref $val && ref $val eq 'ARRAY') {
+            # Array operators
+            if (ref $val && ref $val eq 'ARRAY') {
 
-	      # Between operator
-	      if (index($op, 'BETWEEN') >= 0) {
-		push(@pairs, "$key $op ? AND ?"),
-		  push(@values, map { _stringify($_) } @{$val}[0, 1]);
-	      }
+              # Between operator
+              if (index($op, 'BETWEEN') >= 0) {
+                push(@pairs, "$key $op ? AND ?"),
+                  push(@values, map { _stringify($_) } @{$val}[0, 1]);
+              }
 
-	      # Not element of
-	      elsif ($op =~ /^NOT( IN)?$/) {
-		# Undefined values in the array are not specified
-		# as ' NOT IN (NULL, ...)' does not work
+              # Not element of
+              elsif ($op =~ /^NOT( IN)?$/) {
+                # Undefined values in the array are not specified
+                # as ' NOT IN (NULL, ...)' does not work
 
-		push(@pairs, "$key NOT IN (" . _q($val) . ')' ),
-		  push(@values, map { _stringify($_) } @$val);
-	      };
-	    }
+                push(@pairs, "$key NOT IN (" . _q($val) . ')' ),
+                  push(@values, map { _stringify($_) } @$val);
+              };
+            }
 
-	    # Simple operator
-	    else {
-	      my $p = "$key $op ";
+            # Simple operator
+            else {
+              my $p = "$key $op ";
 
-	      # Value is an object
-	      if (blessed $val) {
-		$val = _stringify($val) or
-		  carp "Unknown Oro value $key $op $val" and next;
-	      };
+              # Value is an object
+              if (blessed $val) {
+                $val = _stringify($val) or
+                  carp "Unknown Oro value $key $op $val" and next;
+              };
 
-	      # Defined value
-	      if (defined $val) {
-		$p .= '?';
-		push(@values, $val);
-	      }
+              # Defined value
+              if (defined $val) {
+                $p .= '?';
+                push(@values, $val);
+              }
 
-	      # Null value
-	      else {
-		$p .= 'NULL';
-	      };
+              # Null value
+              else {
+                $p .= 'NULL';
+              };
 
-	      # Add LIKE escape sequence
-	      if ($op eq 'LIKE') {
-		$p .= q! ESCAPE '\'!;
-	      };
+              # Add LIKE escape sequence
+              if ($op eq 'LIKE') {
+                $p .= q! ESCAPE '\'!;
+              };
 
-	      push(@pairs, $p);
-	    };
+              push(@pairs, $p);
+            };
+          }
 
-	  }
-
-	  # Unknown operator
-	  else {
-	    $val //= '?';
-	    carp "Unknown Oro operator $key $op $val" and next;
-	  }
-	}
+          # Unknown operator
+          else {
+            $val //= '?';
+            carp "Unknown Oro operator $key $op $val" and next;
+          }
+        }
       }
 
       # Escaped SQL
       elsif (ref $value eq 'SCALAR') {
-	push(@pairs, "$key = ($$value)"),
+        push(@pairs, "$key = ($$value)"),
       }
 
       # Stringifiable object
       elsif ($value = _stringify($value)) {
-	# Simple object
-	push(@pairs, "$key = ?"),
-	  push(@values, $value);
+        # Simple object
+        push(@pairs, "$key = ?"),
+          push(@values, $value);
       }
 
       # Unknown pair
       else {
-	carp "Unknown Oro pair $key, " . ($value ? $value : '[undef]' ) and next;
+        carp "Unknown Oro pair $key, " . ($value ? $value : '[undef]' ) and next;
       };
     }
 
@@ -1768,95 +1766,95 @@ sub _get_pairs {
 
       # Limit and Offset restriction
       if ($key =~ m/^-(?:limit|offset|distinct)$/) {
-	$prep{substr($key, 1)} = $value if $value =~ m/^\d+$/o;
+        $prep{substr($key, 1)} = $value if $value =~ m/^\d+$/o;
       }
 
       # Order restriction
       elsif ($key =~ s/^-(order|group)(?:[-_]by)?$/$1/) {
 
-	# Already array and group
-	if ($key eq 'group' && ref $value) {
-	  if (ref $value->[-1] && ref $value->[-1] eq 'HASH') {
-	    $prep{having} = pop @$value;
+        # Already array and group
+        if ($key eq 'group' && ref $value) {
+          if (ref $value->[-1] && ref $value->[-1] eq 'HASH') {
+            $prep{having} = pop @$value;
 
-	    unless (@$value) {
-	      carp '"Having" without "Group" is not allowed' and next;
-	    };
-	  };
-	};
+            unless (@$value) {
+              carp '"Having" without "Group" is not allowed' and next;
+            };
+          };
+        };
 
-	my @field_array;
+        my @field_array;
 
-	# Check group values
-	foreach (ref $value ? @$value : $value) {
+        # Check group values
+        foreach (ref $value ? @$value : $value) {
 
-	  # Valid order/group_by value
-	  if ($_ =~ $VALID_GROUPORDER_REGEX) {
-	    s/^([\-\+])//o;
-	    push(@field_array, $1 && $1 eq '-' ? "$_ DESC" : $_ );
-	  }
+          # Valid order/group_by value
+          if ($_ =~ $VALID_GROUPORDER_REGEX) {
+            s/^([\-\+])//o;
+            push(@field_array, $1 && $1 eq '-' ? "$_ DESC" : $_ );
+          }
 
-	  # Invalid order/group_by value
-	  else {
-	    carp "$_ is not a valid Oro $key restriction";
-	  };
-	};
+          # Invalid order/group_by value
+          else {
+            carp "$_ is not a valid Oro $key restriction";
+          };
+        };
 
-	$prep{$key} = join(', ', @field_array) if scalar @field_array;
+        $prep{$key} = join(', ', @field_array) if scalar @field_array;
       }
 
       # And or or
       elsif ($key =~ m/^-(or|and)$/) {
-	my $op = uc $1;
-	my @array = @$value;
+        my $op = uc $1;
+        my @array = @$value;
 
-	my (@or_pairs, @or_values);
-	while (@array) {
+        my (@or_pairs, @or_values);
+        while (@array) {
 
-	  # Not a hash
-	  if (!ref $array[0]) {
-	    unshift(@array, {
-	      shift @array => shift @array
-	    });
-	  };
+          # Not a hash
+          if (!ref $array[0]) {
+            unshift(@array, {
+              shift @array => shift @array
+            });
+          };
 
-	  # Ignore prep
-	  my ($or_pairs, $or_values) = _get_pairs(shift(@array), $alias);
+          # Ignore prep
+          my ($or_pairs, $or_values) = _get_pairs(shift(@array), $alias);
 
-	  # Push values
-	  push(@values, @$or_values);
+          # Push values
+          push(@values, @$or_values);
 
-	  # Push local pairs
-	  if (@$or_pairs > 1) {
-	    push(@or_pairs, '(' . join (' AND ', @$or_pairs) . ')');
-	  }
+          # Push local pairs
+          if (@$or_pairs > 1) {
+            push(@or_pairs, '(' . join (' AND ', @$or_pairs) . ')');
+          }
 
-	  # Push single local pair
-	  else {
-	    push(@or_pairs, $or_pairs->[0]);
-	  };
-	};
+          # Push single local pair
+          else {
+            push(@or_pairs, $or_pairs->[0]);
+          };
+        };
 
-	# Join with chosen operator
-	push(@pairs, '(' . join(" $op ", @or_pairs) . ')');
+        # Join with chosen operator
+        push(@pairs, '(' . join(" $op ", @or_pairs) . ')');
       }
 
       # Cache
       elsif ($key eq '-cache') {
-	my $chi = $value->{chi};
+        my $chi = $value->{chi};
 
-	# Check chi existence
-	if ($chi) {
-	  $prep{cache} = [ $chi, $value->{key} // '', $value ];
-	}
+        # Check chi existence
+        if ($chi) {
+          $prep{cache} = [ $chi, $value->{key} // '', $value ];
+        }
 
-	# No chi given
-	else {
-	  carp 'No CHI driver given for cache';
-	};
+        # No chi given
+        else {
+          carp 'No CHI driver given for cache';
+        };
       }
       else {
-	carp "$key is an unknown restriction";
+        carp "$key is an unknown restriction";
       };
     };
   };
@@ -1878,12 +1876,12 @@ sub _fields {
 
       # Valid field
       if ($_ =~ $VALID_FIELD_REGEX) {
-	push(@fields, $_);
+        push(@fields, $_);
       }
 
       # Invalid field
       else {
-	carp "$_ is not a valid Oro field value"
+        carp "$_ is not a valid Oro field value"
       };
     }
 
@@ -1908,26 +1906,26 @@ sub _fields {
     join(
       ', ',
       map {
-	# Explicite field alias
-	if ($_ =~ $FIELD_REST_RE) {
+        # Explicite field alias
+        if ($_ =~ $FIELD_REST_RE) {
 
-	  # ~ indicates rather not explicite alias
-	  # Will only be set in case of agregate functions
-	  # TODO: if ($2 eq ':' && index($1,'(') >= 0);
-	  $alias{$3} = $1;
-	  qq{$1 AS `$3`};
-	}
+          # ~ indicates rather not explicite alias
+          # Will only be set in case of agregate functions
+          # TODO: if ($2 eq ':' && index($1,'(') >= 0);
+          $alias{$3} = $1;
+          qq{$1 AS `$3`};
+        }
 
-	# Implicite field alias
-	elsif (m/^(?:.+?)\.(?:[^\.]+?)$/) {
-	  my $cl = _clean_alias $_;
-	  $alias{$cl} = qq{$_ AS `$cl`};
-	}
+        # Implicite field alias
+        elsif (m/^(?:.+?)\.(?:[^\.]+?)$/) {
+          my $cl = _clean_alias $_;
+          $alias{$cl} = qq{$_ AS `$cl`};
+        }
 
-	# Field value
-	else {
-	  $_
-	};
+        # Field value
+        else {
+          $_
+        };
       } @fields
     ),
     (%treatment ? \%treatment : undef),
@@ -1950,17 +1948,17 @@ sub _restrictions {
 
       # Get conditions
       my ($cond_pairs, $cond_values) = _get_pairs(
-	delete $prep->{having}
+        delete $prep->{having}
       );
 
       # Conditions given
       if (@$cond_pairs) {
 
-	# Append having condition
-	$sql .= ' HAVING ' . join(' AND ', @$cond_pairs);
+        # Append having condition
+        $sql .= ' HAVING ' . join(' AND ', @$cond_pairs);
 
-	# Append values
-	push(@$values, @$cond_values);
+        # Append values
+        push(@$values, @$cond_values);
       };
     };
   };
@@ -2050,9 +2048,9 @@ sub _q {
 
       # Check for scalar reference
       unless (ref $r->[0]) {
-	carp 'First element of array insertion needs to be a scalar reference';
-	splice(@{$_[0]}, $i++, 1);
-	next;
+        carp 'First element of array insertion needs to be a scalar reference';
+        splice(@{$_[0]}, $i++, 1);
+        next;
       };
 
       # Embed SQL statement directly
@@ -2153,9 +2151,9 @@ DBIx::Oro - Simple Relational Database Accessor
         [ user_id => $user_id ],
         'msg'] => (
           ['Hello World!'],
-	  ['Seems to work!'],
-	  ['I can insert bulk messages ...'],
-	  ['And I can stop.']
+    ['Seems to work!'],
+    ['I can insert bulk messages ...'],
+    ['And I can stop.']
         )
       ) or return -1;
   });

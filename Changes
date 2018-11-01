@@ -1,119 +1,123 @@
+0.32 2018-11-01
+        - 0.32_1
+          - Change permission of non-executable files.
+
 0.31 2016-08-01
         - 0.31_1
-	  - Deprecated callback in select.
-	- 0.31_2
-	  - Added optional parameter to offsets
-	    in SQLite driver.
-	  - Don't destroy cache objects using DELETE.
-	  - Fixed message trimming.
-	- 0.31_3
-	  - Added 'attached' parameter to SQLite.
-	  - Fixed alias treatment.
-	- 0.31_4
-	  - Fixed precedence warning for recent perl versions.
-	- 0.31_5
-	  - Removed bytes pragma use and added FTS test.
-	- 0.31_6
-	  - Fixed FTS test.
-	- 0.31_7
-	  - Fixed FTS test (2).
-	- 0.31_8
-	  - Skip FTS test in case SQLite was not compiled with
-	    tokenizers enabled.
-	- 0.31_9
-	  - Added unicode parameter to SQLite driver to properly
-	    work with FTS.
-	  - Fixed test for Unicode handling
-	    (when dealing with byte offsets).
+          - Deprecated callback in select.
+        - 0.31_2
+          - Added optional parameter to offsets
+            in SQLite driver.
+          - Don't destroy cache objects using DELETE.
+          - Fixed message trimming.
+        - 0.31_3
+          - Added 'attached' parameter to SQLite.
+          - Fixed alias treatment.
+        - 0.31_4
+          - Fixed precedence warning for recent perl versions.
+        - 0.31_5
+          - Removed bytes pragma use and added FTS test.
+        - 0.31_6
+          - Fixed FTS test.
+        - 0.31_7
+          - Fixed FTS test (2).
+        - 0.31_8
+          - Skip FTS test in case SQLite was not compiled with
+            tokenizers enabled.
+        - 0.31_9
+          - Added unicode parameter to SQLite driver to properly
+            work with FTS.
+          - Fixed test for Unicode handling
+            (when dealing with byte offsets).
 
 0.30 2014-09-09
         - 0.30_1
-	  - Escape fields by default.
+          - Escape fields by default.
         - 0.30_2
-	  - Add callback support for list method.
-	- 0.30_3
-	  - Fix bug on empty inserts.
-	  - Improved documentation.
-	- 0.30_4
-	  - Fixed bug in documentation.
-	- 0.30_5
-	  - Return trimmed error messages.
+          - Add callback support for list method.
+        - 0.30_3
+          - Fix bug on empty inserts.
+          - Improved documentation.
+        - 0.30_4
+          - Fixed bug in documentation.
+        - 0.30_5
+          - Return trimmed error messages.
 
 0.29 2013-06-02
         - 0.29_1
-	  - Add list method.
-	- 0.29_2
-	  - Fix count bug.
-	  - Fixed bug in list caching.
-	- 0.29_3
-	  - Fix perl 5.18.0 compatibility problems.
-	- 0.29_4
-	  - Add absent and disparate filter operations in list.
-	- 0.29_5
-	  - Support -or and -and junctions.
-	- 0.29_6
-	  - Fix hash randomization bug in test suite.
-	- 0.29_7
-	  - Fix stringification bug in merge.
-	- 0.29_8
-	  - Fix small bug in automatic disconnect.
+          - Add list method.
+        - 0.29_2
+          - Fix count bug.
+          - Fixed bug in list caching.
+        - 0.29_3
+          - Fix perl 5.18.0 compatibility problems.
+        - 0.29_4
+          - Add absent and disparate filter operations in list.
+        - 0.29_5
+          - Support -or and -and junctions.
+        - 0.29_6
+          - Fix hash randomization bug in test suite.
+        - 0.29_7
+          - Fix stringification bug in merge.
+        - 0.29_8
+          - Fix small bug in automatic disconnect.
 
 0.28 2013-05-15
         - 0.28_1
-	  - Improve documentation.
-	  - Add SQLite tests to the suite.
-	  - Improve Synopsis.
-	  - Prepare first CPAN release.
-	- 0.28_2
-	  - Fixed small bug in test suite for
-	    CHI free environments.
-	- 0.28_3
-	  - Fixed small bug in test suite for
-	    CHI free environments (2).
-	- 0.28_4
-	  - Circumvent bug (?) in calculations in DBD::SQLite.
-	- 0.28_5
-	  - Fixed hash sorting bug in test suite.
-	- 0.28_6
-	  - Improved test suite.
-	- 0.28_7
-	  - Added escaped SQL for pairs.
+          - Improve documentation.
+          - Add SQLite tests to the suite.
+          - Improve Synopsis.
+          - Prepare first CPAN release.
+        - 0.28_2
+          - Fixed small bug in test suite for
+            CHI free environments.
+        - 0.28_3
+          - Fixed small bug in test suite for
+            CHI free environments (2).
+        - 0.28_4
+          - Circumvent bug (?) in calculations in DBD::SQLite.
+        - 0.28_5
+          - Fixed hash sorting bug in test suite.
+        - 0.28_6
+          - Improved test suite.
+        - 0.28_7
+          - Added escaped SQL for pairs.
 
 0.27 2013-02-13
         - Enable extensions.
-	- Add local $_ to select callbacks.
-	- Add local $_ to transaction callbacks.
-	- Add 'not in' operator.
-	- Make 'Offset' only work inside 'limit'
+        - Add local $_ to select callbacks.
+        - Add local $_ to transaction callbacks.
+        - Add 'not in' operator.
+        - Make 'Offset' only work inside 'limit'
 
 0.26 2013-02-05
         - Updated year.
-	- Documentation tweak.
+        - Documentation tweak.
 
 0.25 2012-12-01
         - Moved "created" method to SQLite Driver.
-	- Improved documentation.
+        - Improved documentation.
 
 0.24 2012-11-28
         - Bugfix for transaction callbacks.
-	- Bugfix for automatic prefixing.
+        - Bugfix for automatic prefixing.
 
 0.23 2012-06-28
         - Improved MySQL support.
         - Made testsuite work with different databases.
         - Added TEST_DB flag for make test.
         - Added MySQL driver.
-	- Made SQLite instantiation a little smarter for
-	  multi instance startups.
+        - Made SQLite instantiation a little smarter for
+          multi instance startups.
 
 0.22 2012-06-13
         - Added autocommit method to SQLite driver.
-	- improved Constructor method for SQLite files.
-	- Introduces import_sql method and constructor parameter.
-	- Improved field syntax.
+        - improved Constructor method for SQLite files.
+        - Introduces import_sql method and constructor parameter.
+        - Improved field syntax.
         - Fixed a small bug regarding in_txn.
-	- Added stringification to objects in pairs.
-	- Fixed Bug in count.
+        - Added stringification to objects in pairs.
+        - Fixed Bug in count.
 
 0.21 2012-05-31
         - Moved Sojolicious::Oro to DBIx::Oro.
@@ -123,14 +127,14 @@
         - Optimization for last_sql report.
         - Small optimization for error reports.
         - Fixed a small bug in joined tables.
-	- Fixed a small bug in count.
-	- Fixed a small bug in select callback.
+        - Fixed a small bug in count.
+        - Fixed a small bug in select callback.
         - Splitted test files.
-	- Fixed a small bug in -order_by preparation.
-	- Added -group_by condition.
- 	- Fixed a lot of bugs in the field selector.
- 	- Made join tables a lot more powerful.
-	- Lots of micro optimizations.
+        - Fixed a small bug in -order_by preparation.
+        - Added -group_by condition.
+        - Fixed a lot of bugs in the field selector.
+        - Made join tables a lot more powerful.
+        - Lots of micro optimizations.
         - Made driver attribute stable.
 
 0.20 2012-05-20
@@ -138,7 +142,7 @@
         - Deleted deprecated methods from Oro.
 
 0.19 2012-05-01
-	- Added native caching option to Oro.
+        - Added native caching option to Oro.
 
 0.18 2012-04-25
         - Added on_connect event to Oro.
@@ -150,12 +154,12 @@
 
 0.16 2012-04-02
         - Split Oro and Oro::SQLite.
-	- Added Oro::SQLite.
-	- Added snippet, offsets, and matchinfo support to Oro::SQLite.
-	- Added attach and detach support to Oro::SQLite.
-	- Added password support to Oro.
-	- Added treatment support to Oro.
-	- Changed default errors in Oro to be printed.
+        - Added Oro::SQLite.
+        - Added snippet, offsets, and matchinfo support to Oro::SQLite.
+        - Added attach and detach support to Oro::SQLite.
+        - Added password support to Oro.
+        - Added treatment support to Oro.
+        - Changed default errors in Oro to be printed.
         - Added explain method to Oro.
         - Lots of bugfixes everywhere.
 
@@ -163,11 +167,11 @@
         - Made Sojolicious::Oro thread- and fork-safe.
         - Added restrictions to Sojolicious::Oro.
         - Added Simple Joins to Sojolicious::Oro.
-	- Removed Pager support from Sojolicious::Oro.
-	- Added distinct restriction to Sojolicious::Oro.
-	- Added multiple insertions with default to
-	  Sojolicious::Oro.
-	- Multiple bugfixes to Sojolicious::Oro,
+        - Removed Pager support from Sojolicious::Oro.
+        - Added distinct restriction to Sojolicious::Oro.
+        - Added multiple insertions with default to
+          Sojolicious::Oro.
+        - Multiple bugfixes to Sojolicious::Oro,
           Sojolicious::ComplexValues.
         - Added operator support for Sojolicious::Oro.
 
