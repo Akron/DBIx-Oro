@@ -1,6 +1,8 @@
-0.32 2018-11-01
+0.32 2021-04-18
         - 0.32_1
           - Change permission of non-executable files.
+        - 0.32_2
+          - Fix handling of on_conflict cases in SQLite.
 
 0.31 2016-08-01
         - 0.31_1

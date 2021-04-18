@@ -1,5 +1,5 @@
 #!/usr/bin/env perl
-use Test::More tests => 92;
+use Test::More tests => 94;
 use File::Temp qw/:POSIX/;
 use strict;
 use warnings;
@@ -107,8 +107,10 @@ is($result->{check}->[0]->[2], 6, 'Byte offset');
 is($result->{check}->[1]->[2], 24, 'Byte offset');
 
 ok($oro->do('CREATE TABLE mailinfo (doc_id INTEGER PRIMARY KEY, title TEXT)'), 'Init table');
-ok($oro->insert(mailinfo => { title => 'hello', doc_id => 2 }), 'Insert');
+ok($oro->insert(mailinfo => { title => 'hallo', doc_id => 2 }), 'Insert');
 ok($oro->insert(mailinfo => { title => 'urgent', doc_id => 3 }), 'Insert');
+ok($oro->insert(mailinfo => { -on_conflict => 'ignore' } => { title => 'cool', doc_id => 3 }), 'Insert');
+ok($oro->insert(mailinfo => { -on_conflict => 'replace' } => { title => 'hello', doc_id => 2 }), 'Insert');
 
 ok($result = $oro->load([
   mail => [qw/body/] => { docid => 1 },

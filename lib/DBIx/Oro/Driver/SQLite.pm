@@ -297,7 +297,7 @@ sub insert {
 	$sql = 'REPLACE '
       }
       elsif ($oc eq 'ignore')  {
-	$sql .= 'IGNORE '
+	$sql .= 'OR IGNORE '
       };
     };
 
